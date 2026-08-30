@@ -1,0 +1,22 @@
+{
+  "name": "myKitchen – Recipes & Pantry",
+  "short_name": "myKitchen",
+  "description": "Save recipes, build grocery lists and keep track of what is in your pantry.",
+  "start_url": "./index.html#recipes",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff7e8",
+  "theme_color": "#fff7e8",
+  "orientation": "any",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "./icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Recipes", "short_name": "Recipes", "url": "./index.html#recipes", "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Grocery list", "short_name": "Grocery", "url": "./index.html#grocery", "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Pantry", "short_name": "Pantry", "url": "./index.html#pantry", "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

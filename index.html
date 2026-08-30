@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#fff7e8" />
+  <meta name="description" content="Save recipes, build a grocery list and keep an eye on your pantry." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="myKitchen" />
+  <title>myKitchen</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="./styles.css?v=1" />
+</head>
+<body>
+  <svg class="icon-sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-logo" viewBox="0 0 64 64">
+      <path d="M17 11v15M12 11v8c0 5 10 5 10 0v-8M17 26v27" />
+      <path d="M42 11c-6 0-10 7-10 15 0 7 3 11 8 12v15M42 11v27" />
+    </symbol>
+    <symbol id="i-recipes" viewBox="0 0 24 24"><path d="M5 4h10a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3V5a1 1 0 0 1 1-1Z"/><path d="M7 16h11M8 8h6M8 11h5"/></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L20 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></symbol>
+    <symbol id="i-pantry" viewBox="0 0 24 24"><path d="M6 6h12l-1 15H7L6 6Z"/><path d="M5 3h14v3H5zM9 11h6M9 15h6"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.7a7 7 0 0 0-.8-1.8l.9-2-2.1-2.1-2 .9a7 7 0 0 0-1.8-.8L10.5 2h-3l-.7 2a7 7 0 0 0-1.8.8l-2-.9L.9 6l.9 2a7 7 0 0 0-.8 1.8l-2 .7v3l2 .7a7 7 0 0 0 .8 1.8l-.9 2L3 20.1l2-.9a7 7 0 0 0 1.8.8l.7 2h3l.7-2a7 7 0 0 0 1.8-.8l2 .9 2.1-2.1-.9-2a7 7 0 0 0 .8-1.8l2-.7Z" transform="translate(2) scale(.84)"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="m4 16-1 5 5-1L20 8l-4-4L4 16Z"/><path d="m13.5 6.5 4 4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 3h6l1 4H8l1-4ZM7 7l1 14h8l1-14M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15.2A8.4 8.4 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"/></symbol>
+    <symbol id="i-sync" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 8a7 7 0 0 1 11.7-2.1L20 8M4 16l2.2 2.1A7 7 0 0 0 17.9 16"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M4 19h16"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+  </svg>
+
+  <section id="authScreen" class="auth-screen" aria-labelledby="authTitle">
+    <div class="auth-layout">
+      <div class="auth-art" aria-hidden="true">
+        <span class="auth-splash">Fresh ideas.<br />One happy pantry.</span>
+        <img src="./assets/kitchen-basket.png" alt="" />
+      </div>
+      <div class="auth-card">
+        <div class="brand-lockup auth-brand">
+          <span class="brand-mark"><svg><use href="#i-logo"></use></svg></span>
+          <span>myKitchen</span>
+        </div>
+        <p class="eyebrow">YOUR RECIPES, READY TO COOK</p>
+        <h1 id="authTitle">Come into the kitchen</h1>
+        <p>Use the same account as Forge and Level90. Your recipes and lists stay in sync.</p>
+        <div id="authLoading" class="auth-loading" role="status"><span class="spinner"></span>Checking your account…</div>
+        <div id="authFormContent" hidden>
+          <div class="segment" aria-label="Account action">
+            <button id="signInModeButton" class="is-active" type="button" aria-pressed="true">Sign in</button>
+            <button id="signUpModeButton" type="button" aria-pressed="false">Create account</button>
+          </div>
+          <form id="authForm" class="stack-form" novalidate>
+            <label>Email<input id="authEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" required /></label>
+            <label>Password<input id="authPassword" type="password" minlength="6" autocomplete="current-password" required /><small id="authPasswordHelp">Use the same password as your other apps.</small></label>
+            <button id="authSubmitButton" class="button primary wide" type="submit">Sign in</button>
+          </form>
+          <p id="authMessage" class="form-message" role="status" aria-live="polite"></p>
+          <small class="offline-note">Your first sign-in needs an internet connection. Afterwards, myKitchen remains available offline.</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="appShell" class="app-shell" hidden>
+    <aside class="sidebar">
+      <div class="brand-lockup">
+        <span class="brand-mark"><svg><use href="#i-logo"></use></svg></span>
+        <span>myKitchen</span>
+      </div>
+      <nav class="side-nav" aria-label="Main navigation">
+        <button class="nav-button is-active" data-view="recipes"><svg><use href="#i-recipes"></use></svg><span>Recipes</span></button>
+        <button class="nav-button" data-view="grocery"><svg><use href="#i-cart"></use></svg><span>Grocery</span><b id="groceryNavCount" class="nav-count" hidden>0</b></button>
+        <button class="nav-button" data-view="pantry"><svg><use href="#i-pantry"></use></svg><span>Pantry</span></button>
+        <button class="nav-button" data-view="settings"><svg><use href="#i-settings"></use></svg><span>Settings</span></button>
+      </nav>
+      <div class="sidebar-note">
+        <img src="./assets/kitchen-basket.png" alt="" />
+        <p>Pick recipes.<br />Shop once.<br />Cook happily.</p>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="viewEyebrow">RECIPE BOX</p>
+          <strong id="topGreeting">Hello!</strong>
+        </div>
+        <div class="top-actions">
+          <span id="connectionPill" class="connection-pill"><i></i><span>Connected</span></span>
+          <button id="themeToggle" class="icon-button" type="button" aria-label="Switch to dark mode">
+            <svg class="sun-icon"><use href="#i-sun"></use></svg><svg class="moon-icon"><use href="#i-moon"></use></svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <section id="view-recipes" class="view is-active" aria-labelledby="recipesTitle">
+          <div class="page-head">
+            <div><h1 id="recipesTitle">What are we cooking?</h1><p>Choose one or several recipes, then send their ingredients to your grocery list.</p></div>
+            <button id="addRecipeButton" class="button primary" type="button"><svg><use href="#i-plus"></use></svg>Add recipe</button>
+          </div>
+          <div class="recipe-toolbar">
+            <label class="search-box"><svg><use href="#i-search"></use></svg><input id="recipeSearch" type="search" placeholder="Search recipes or ingredients" aria-label="Search recipes or ingredients" /></label>
+            <span id="recipeCountLabel" class="soft-count">0 recipes</span>
+          </div>
+          <div id="selectionBar" class="selection-bar" hidden>
+            <span><strong id="selectedRecipeCount">0</strong> selected</span>
+            <div><button id="clearSelectionButton" class="button ghost" type="button">Clear</button><button id="addSelectedToGroceryButton" class="button primary" type="button"><svg><use href="#i-cart"></use></svg>Add ingredients</button></div>
+          </div>
+          <div id="recipeGrid" class="recipe-grid"></div>
+          <div id="recipesEmpty" class="empty-state" hidden>
+            <img src="./assets/kitchen-basket.png" alt="A cheerful grocery basket" />
+            <h2>Your recipe box is waiting</h2><p>Add the dishes you love and myKitchen will remember the shopping.</p>
+            <button id="emptyAddRecipeButton" class="button primary" type="button">Add your first recipe</button>
+          </div>
+        </section>
+
+        <section id="view-grocery" class="view" aria-labelledby="groceryTitle">
+          <div class="page-head"><div><h1 id="groceryTitle">Grocery list</h1><p>Items stay on the list, even when they are already in your pantry.</p></div></div>
+          <form id="groceryAddForm" class="quick-add">
+            <label><span>Quick add</span><input id="groceryNameInput" maxlength="120" autocomplete="off" placeholder="e.g. Coconut milk" required /></label>
+            <button class="button primary" type="submit"><svg><use href="#i-plus"></use></svg>Add item</button>
+          </form>
+          <div class="list-summary">
+            <div><strong id="groceryOpenCount">0</strong><span>left to pick up</span></div>
+            <div><strong id="groceryPantryCount">0</strong><span>already in pantry</span></div>
+            <div><strong id="groceryBoughtCount">0</strong><span>ticked off</span></div>
+          </div>
+          <div id="groceryList" class="item-list"></div>
+          <div id="groceryEmpty" class="empty-state compact" hidden><h2>Your list is clear</h2><p>Select recipes or add an item manually.</p></div>
+        </section>
+
+        <section id="view-pantry" class="view" aria-labelledby="pantryTitle">
+          <div class="page-head"><div><h1 id="pantryTitle">Pantry</h1><p>Ticking a grocery item automatically brings it here.</p></div></div>
+          <form id="pantryAddForm" class="quick-add">
+            <label><span>Add what you already have</span><input id="pantryNameInput" maxlength="120" autocomplete="off" placeholder="e.g. Basmati rice" required /></label>
+            <button class="button primary" type="submit"><svg><use href="#i-plus"></use></svg>Add to pantry</button>
+          </form>
+          <div class="filter-row" role="group" aria-label="Pantry filter">
+            <button class="filter-pill is-active" data-pantry-filter="available" type="button">Available <span id="availablePantryCount">0</span></button>
+            <button class="filter-pill" data-pantry-filter="finished" type="button">Finished <span id="finishedPantryCount">0</span></button>
+            <button class="filter-pill" data-pantry-filter="all" type="button">All</button>
+          </div>
+          <div id="pantryList" class="pantry-grid"></div>
+          <div id="pantryEmpty" class="empty-state compact" hidden><h2>Nothing here yet</h2><p>Add pantry items manually or tick them off while shopping.</p></div>
+        </section>
+
+        <section id="view-settings" class="view" aria-labelledby="settingsTitle">
+          <div class="page-head"><div><h1 id="settingsTitle">Settings</h1><p>Manage your kitchen, account and backups.</p></div></div>
+          <div class="settings-grid">
+            <section class="settings-card">
+              <div class="settings-card-head"><div><p class="eyebrow">YOUR KITCHEN</p><h2>Profile</h2></div></div>
+              <form id="profileForm" class="stack-form compact-form"><label>Your name<input id="profileNameInput" maxlength="40" autocomplete="name" required /></label><button class="button secondary" type="submit">Save name</button></form>
+            </section>
+            <section class="settings-card">
+              <div class="settings-card-head"><div><p class="eyebrow">APPEARANCE</p><h2>Theme</h2></div></div>
+              <div class="theme-choice" role="radiogroup" aria-label="Theme">
+                <button data-theme-choice="light" type="button"><svg><use href="#i-sun"></use></svg>Light</button>
+                <button data-theme-choice="dark" type="button"><svg><use href="#i-moon"></use></svg>Dark</button>
+              </div>
+            </section>
+            <section class="settings-card wide-card">
+              <div class="settings-card-head"><div><p class="eyebrow">ACCOUNT &amp; CLOUD</p><h2>Automatic sync</h2><p>myKitchen uses the same Supabase account as Forge and Level90.</p></div><span id="settingsConnectionStatus" class="status-badge">Connected</span></div>
+              <div class="account-row"><div><small>Signed in as</small><strong id="accountEmail">—</strong></div><button id="signOutButton" class="button ghost" type="button">Sign out</button></div>
+              <div class="account-row"><div><small>Kitchen data</small><strong id="cloudSyncStatus">Preparing cloud sync…</strong></div><button id="syncNowButton" class="button secondary" type="button"><svg><use href="#i-sync"></use></svg>Sync now</button></div>
+              <p id="accountMessage" class="form-message" role="status" aria-live="polite"></p>
+            </section>
+            <section class="settings-card wide-card">
+              <div class="settings-card-head"><div><p class="eyebrow">BACKUP</p><h2>Import or export</h2><p>Export a JSON backup. Importing a backup replaces this account's current myKitchen data after confirmation.</p></div></div>
+              <div class="backup-actions">
+                <button id="exportButton" class="button secondary" type="button"><svg><use href="#i-download"></use></svg>Export backup</button>
+                <button id="importButton" class="button secondary" type="button"><svg><use href="#i-upload"></use></svg>Import backup</button>
+                <input id="importFileInput" type="file" accept="application/json,.json" hidden />
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="Main navigation">
+        <button class="nav-button is-active" data-view="recipes"><svg><use href="#i-recipes"></use></svg><span>Recipes</span></button>
+        <button class="nav-button" data-view="grocery"><svg><use href="#i-cart"></use></svg><span>Grocery</span><b id="groceryMobileCount" class="nav-count" hidden>0</b></button>
+        <button class="nav-button" data-view="pantry"><svg><use href="#i-pantry"></use></svg><span>Pantry</span></button>
+        <button class="nav-button" data-view="settings"><svg><use href="#i-settings"></use></svg><span>Settings</span></button>
+      </nav>
+    </div>
+  </div>
+
+  <dialog id="nameDialog" class="app-dialog name-dialog">
+    <form id="nameForm" method="dialog" class="dialog-card">
+      <span class="dialog-sticker">👋</span>
+      <p class="eyebrow">FIRST THINGS FIRST</p><h2>What should we call you?</h2><p>Your name makes this kitchen feel like yours.</p>
+      <label>Your name<input id="firstNameInput" maxlength="40" autocomplete="name" placeholder="Your name" required autofocus /></label>
+      <button class="button primary wide" type="submit">Welcome me in</button>
+    </form>
+  </dialog>
+
+  <dialog id="recipeDialog" class="app-dialog recipe-dialog">
+    <form id="recipeForm" class="dialog-card" method="dialog">
+      <div class="dialog-head"><div><p class="eyebrow" id="recipeDialogEyebrow">NEW RECIPE</p><h2 id="recipeDialogTitle">Add a recipe</h2></div><button class="icon-button dialog-close" type="button" data-close-dialog="recipeDialog" aria-label="Close"><svg><use href="#i-close"></use></svg></button></div>
+      <input id="recipeIdInput" type="hidden" />
+      <div class="form-grid">
+        <label class="span-2">Recipe name<input id="recipeTitleInput" maxlength="80" required placeholder="e.g. Creamy tomato pasta" /></label>
+        <label>Category<input id="recipeCategoryInput" maxlength="36" placeholder="e.g. Dinner" /></label>
+        <label class="span-2">Ingredients <small>One item per line—quantities are not needed.</small><textarea id="recipeIngredientsInput" rows="7" required placeholder="Pasta&#10;Tomatoes&#10;Parmesan"></textarea></label>
+        <label class="span-2">Method <small>One step per line.</small><textarea id="recipeStepsInput" rows="7" placeholder="Boil the pasta&#10;Make the sauce&#10;Combine and serve"></textarea></label>
+        <label class="span-2">Notes<textarea id="recipeNotesInput" rows="3" maxlength="500" placeholder="Optional tips or substitutions"></textarea></label>
+      </div>
+      <div class="dialog-actions"><button class="button ghost" type="button" data-close-dialog="recipeDialog">Cancel</button><button class="button primary" type="submit">Save recipe</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="recipeDetailDialog" class="app-dialog detail-dialog">
+    <div class="dialog-card">
+      <div class="dialog-head"><div><p id="detailCategory" class="eyebrow">RECIPE</p><h2 id="detailTitle">Recipe title</h2></div><button class="icon-button dialog-close" type="button" data-close-dialog="recipeDetailDialog" aria-label="Close"><svg><use href="#i-close"></use></svg></button></div>
+      <div class="detail-columns"><section><h3>Ingredients</h3><ul id="detailIngredients" class="ingredient-list"></ul></section><section><h3>Method</h3><ol id="detailSteps" class="step-list"></ol></section></div>
+      <p id="detailNotes" class="detail-notes" hidden></p>
+      <div class="dialog-actions"><button id="detailEditButton" class="button secondary" type="button"><svg><use href="#i-edit"></use></svg>Edit recipe</button><button id="detailAddToGroceryButton" class="button primary" type="button"><svg><use href="#i-cart"></use></svg>Add ingredients</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="confirmDialog" class="app-dialog confirm-dialog">
+    <div class="dialog-card"><span class="dialog-sticker">?</span><h2 id="confirmTitle">Are you sure?</h2><p id="confirmMessage"></p><div class="dialog-actions"><button id="confirmCancelButton" class="button ghost" type="button">Cancel</button><button id="confirmActionButton" class="button danger" type="button">Delete</button></div></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
+  <script src="./core.js?v=1" defer></script>
+  <script src="./app.js?v=1" defer></script>
+</body>
+</html>
