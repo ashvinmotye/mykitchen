@@ -16,6 +16,7 @@ A plain HTML, CSS and JavaScript PWA for recipes, grocery lists and pantry track
 - Pantry items can be marked finished, restored or removed
 - Ingredient review workspace for finding duplicate names and merging them across every recipe
 - Pantry organiser for selecting recipe ingredients already available at home
+- Recipe measurements after a dash and `(optional)` notes are preserved in recipes but hidden from ingredient-management views
 - Manual pantry additions for items already at home
 - First-use name prompt
 - Light and dark themes

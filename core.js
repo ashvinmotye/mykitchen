@@ -21,6 +21,18 @@
     return input.map(item => cleanText(item, maxLength)).filter(Boolean).slice(0, maxItems);
   }
 
+  function parseIngredientLine(value) {
+    const full = cleanText(value, 120);
+    if (!full) return { full: "", name: "", details: "" };
+    const measurement = full.match(/\s+[-–—]\s*|[-–—]\s+/);
+    const optional = full.match(/\s*\(\s*optional\s*\)/i);
+    const boundaries = [measurement?.index, optional?.index].filter(index => Number.isInteger(index) && index > 0);
+    if (!boundaries.length) return { full, name: full, details: "" };
+    const boundary = Math.min(...boundaries);
+    const name = cleanText(full.slice(0, boundary), 120);
+    return name ? { full, name, details: full.slice(boundary) } : { full, name: full, details: "" };
+  }
+
   function cleanYoutubeLinks(value) {
     const links = [];
     const seen = new Set();
@@ -194,8 +206,8 @@
   }
 
   function pantryHas(state, name) {
-    const key = normalizeName(name);
-    return active(state?.pantry).some(item => item.status === "available" && item.normalizedName === key);
+    const key = normalizeName(parseIngredientLine(name).name);
+    return active(state?.pantry).some(item => item.status === "available" && normalizeName(parseIngredientLine(item.name).name) === key);
   }
 
   function addRecipesToGrocery(inputState, recipeIds, at = nowIso()) {
@@ -235,11 +247,13 @@
 
   function stockPantry(inputState, name, at = nowIso()) {
     const state = hydrateState(inputState);
-    const normalized = normalizeName(name);
+    const ingredientName = parseIngredientLine(name).name;
+    const normalized = normalizeName(ingredientName);
     if (!normalized) return state;
-    const existing = active(state.pantry).find(item => item.normalizedName === normalized);
+    const existing = active(state.pantry).find(item => normalizeName(parseIngredientLine(item.name).name) === normalized);
     if (existing) {
-      existing.name = cleanText(name, 120);
+      existing.name = ingredientName;
+      existing.normalizedName = normalized;
       existing.status = "available";
       existing.stockedAt = at;
       existing.finishedAt = null;
@@ -248,7 +262,7 @@
     }
     state.pantry.unshift(normalizePantry({
       id: recordId("pantry"),
-      name,
+      name: ingredientName,
       normalizedName: normalized,
       status: "available",
       stockedAt: at,
@@ -265,21 +279,23 @@
     if (!keeper || selectedNames.size < 2 || !selectedNames.has(keeper)) return state;
 
     for (const recipe of active(state.recipes)) {
-      let keeperAdded = false;
       let changed = false;
       const nextIngredients = [];
+      const mergedLines = new Set();
       for (const ingredient of recipe.ingredients) {
-        if (!selectedNames.has(ingredient)) {
+        const parsed = parseIngredientLine(ingredient);
+        if (!selectedNames.has(parsed.name)) {
           nextIngredients.push(ingredient);
           continue;
         }
-        if (!keeperAdded) {
-          nextIngredients.push(keeper);
-          keeperAdded = true;
-        } else {
+        const mergedLine = cleanText(`${keeper}${parsed.details}`, 120);
+        if (mergedLines.has(mergedLine)) {
           changed = true;
+          continue;
         }
-        if (ingredient !== keeper) changed = true;
+        mergedLines.add(mergedLine);
+        nextIngredients.push(mergedLine);
+        if (ingredient !== mergedLine) changed = true;
       }
       if (changed) {
         recipe.ingredients = nextIngredients;
@@ -296,6 +312,7 @@
     clone,
     cleanText,
     cleanLines,
+    parseIngredientLine,
     cleanYoutubeLinks,
     normalizeName,
     recordId,

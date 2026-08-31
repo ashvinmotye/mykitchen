@@ -1,10 +1,10 @@
-const CACHE_NAME = "mykitchen-v4";
+const CACHE_NAME = "mykitchen-v5";
 const APP_ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=4",
-  "./core.js?v=4",
-  "./app.js?v=4",
+  "./styles.css?v=5",
+  "./core.js?v=5",
+  "./app.js?v=5",
   "./manifest.webmanifest",
   "./assets/kitchen-basket.png",
   "./icons/favicon-32.png",

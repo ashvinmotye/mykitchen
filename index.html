@@ -12,7 +12,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
-  <link rel="stylesheet" href="./styles.css?v=4" />
+  <link rel="stylesheet" href="./styles.css?v=5" />
 </head>
 <body>
   <svg class="icon-sprite" aria-hidden="true" focusable="false">
@@ -175,7 +175,7 @@
               </div>
             </section>
             <section class="settings-card wide-card ingredient-tools-card">
-              <div class="settings-card-head"><div><p class="eyebrow">INGREDIENT LIBRARY</p><h2>Tidy ingredient names</h2><p>Review every ingredient A–Z, find duplicate spellings and merge them across all recipes.</p></div></div>
+              <div class="settings-card-head"><div><p class="eyebrow">INGREDIENT LIBRARY</p><h2>Tidy ingredient names</h2><p>Review ingredient names A–Z and merge duplicate spellings. Measurements and (optional) notes stay in their recipes.</p></div></div>
               <button id="openIngredientReviewButton" class="button secondary" type="button"><svg><use href="#i-merge"></use></svg>Review ingredients</button>
             </section>
             <section class="settings-card wide-card">
@@ -196,7 +196,7 @@
         </section>
 
         <section id="view-ingredient-review" class="view" aria-labelledby="ingredientReviewTitle">
-          <div class="page-head"><div><p class="eyebrow">INGREDIENT LIBRARY</p><h1 id="ingredientReviewTitle">Review ingredients</h1><p>Select duplicate names, then choose the one spelling you want every recipe to keep.</p></div><button id="backToSettingsButton" class="button secondary" type="button"><svg><use href="#i-back"></use></svg>Back to settings</button></div>
+          <div class="page-head"><div><p class="eyebrow">INGREDIENT LIBRARY</p><h1 id="ingredientReviewTitle">Review ingredients</h1><p>Select duplicate names, then choose the spelling to keep. Measurements and (optional) notes are hidden here but remain in each recipe.</p></div><button id="backToSettingsButton" class="button secondary" type="button"><svg><use href="#i-back"></use></svg>Back to settings</button></div>
           <div class="manager-summary two-column-summary">
             <div><strong id="ingredientReviewTotal">0</strong><span>unique ingredient names</span></div>
             <div><strong id="ingredientReviewDuplicateCount">0</strong><span>possible duplicate groups</span></div>
@@ -218,7 +218,7 @@
         </section>
 
         <section id="view-pantry-organiser" class="view" aria-labelledby="pantryOrganiserTitle">
-          <div class="page-head"><div><p class="eyebrow">PANTRY HELPER</p><h1 id="pantryOrganiserTitle">Organise from recipes</h1><p>Review every recipe ingredient A–Z and select what you already have at home.</p></div><button id="backToPantryButton" class="button secondary" type="button"><svg><use href="#i-back"></use></svg>Back to pantry</button></div>
+          <div class="page-head"><div><p class="eyebrow">PANTRY HELPER</p><h1 id="pantryOrganiserTitle">Organise from recipes</h1><p>Select what you already have using clean ingredient names. Measurements and (optional) notes remain only in recipes.</p></div><button id="backToPantryButton" class="button secondary" type="button"><svg><use href="#i-back"></use></svg>Back to pantry</button></div>
           <div class="manager-summary">
             <div><strong id="pantryOrganiserTotal">0</strong><span>recipe ingredients</span></div>
             <div><strong id="pantryOrganiserInPantry">0</strong><span>already in pantry</span></div>
@@ -292,7 +292,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./core.js?v=4" defer></script>
-  <script src="./app.js?v=4" defer></script>
+  <script src="./core.js?v=5" defer></script>
+  <script src="./app.js?v=5" defer></script>
 </body>
 </html>

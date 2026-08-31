@@ -226,7 +226,7 @@ function ingredientCatalogue() {
   for (const recipe of activeRecipes()) {
     const seenInRecipe = new Set();
     for (const rawIngredient of recipe.ingredients) {
-      const name = Core.cleanText(rawIngredient, 120);
+      const name = Core.parseIngredientLine(rawIngredient).name;
       if (!name) continue;
       if (!byName.has(name)) byName.set(name, { name, normalizedName: Core.normalizeName(name), recipeIds: new Set(), recipeTitles: new Set() });
       if (seenInRecipe.has(name)) continue;
@@ -304,7 +304,7 @@ function renderIngredientReview() {
 
 function pantryIngredientStatus(name) {
   const normalized = Core.normalizeName(name);
-  const matches = activePantry().filter(item => item.normalizedName === normalized);
+  const matches = activePantry().filter(item => Core.normalizeName(Core.parseIngredientLine(item.name).name) === normalized);
   if (matches.some(item => item.status === "available")) return "available";
   if (matches.some(item => item.status === "finished")) return "finished";
   return "missing";
@@ -964,7 +964,10 @@ function bindEvents() {
     const selectedNames = [...ingredientReviewSelection];
     const keepName = ingredientKeepName;
     if (selectedNames.length < 2 || !selectedNames.includes(keepName)) return;
-    const affectedRecipes = activeRecipes().filter(recipe => recipe.ingredients.some(ingredient => selectedNames.includes(ingredient) && ingredient !== keepName)).length;
+    const affectedRecipes = activeRecipes().filter(recipe => recipe.ingredients.some(ingredient => {
+      const ingredientName = Core.parseIngredientLine(ingredient).name;
+      return selectedNames.includes(ingredientName) && ingredientName !== keepName;
+    })).length;
     const replacedNames = selectedNames.filter(name => name !== keepName);
     const confirmed = await askConfirm("Merge these ingredient names?", `${replacedNames.join(", ")} will become ${keepName} in ${affectedRecipes} ${affectedRecipes === 1 ? "recipe" : "recipes"}. Your grocery list and pantry will not change.`, "Merge");
     if (!confirmed) return;
