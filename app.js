@@ -40,6 +40,7 @@ const dom = {
   groceryBoughtCount: document.querySelector("#groceryBoughtCount"),
   groceryNavCount: document.querySelector("#groceryNavCount"),
   groceryMobileCount: document.querySelector("#groceryMobileCount"),
+  clearGroceryButton: document.querySelector("#clearGroceryButton"),
   pantryList: document.querySelector("#pantryList"),
   pantryEmpty: document.querySelector("#pantryEmpty"),
   availablePantryCount: document.querySelector("#availablePantryCount"),
@@ -257,6 +258,7 @@ function renderGrocery() {
   dom.groceryOpenCount.textContent = String(openCount);
   dom.groceryPantryCount.textContent = String(pantryCount);
   dom.groceryBoughtCount.textContent = String(boughtCount);
+  dom.clearGroceryButton.hidden = items.length === 0;
   for (const badge of [dom.groceryNavCount, dom.groceryMobileCount]) {
     badge.textContent = String(openCount);
     badge.hidden = openCount === 0;
@@ -779,10 +781,14 @@ function bindEvents() {
     } else if (action === "view-recipe") openRecipeDetail(recipe);
     else if (action === "edit-recipe") openRecipeForm(recipe);
     else if (action === "delete-recipe") {
-      const confirmed = await askConfirm("Delete this recipe?", `${recipe.title} will be removed. Existing grocery items will stay on your list.`);
+      const recipeId = recipe.id;
+      const recipeTitle = recipe.title;
+      const confirmed = await askConfirm("Delete this recipe?", `${recipeTitle} will be removed. Existing grocery items will stay on your list.`);
       if (!confirmed) return;
+      const liveRecipe = state.recipes.find(item => item.id === recipeId && !item.deletedAt);
+      if (!liveRecipe) return;
       const now = Core.nowIso();
-      recipe.deletedAt = now; recipe.updatedAt = now; selectedRecipes.delete(recipe.id);
+      liveRecipe.deletedAt = now; liveRecipe.updatedAt = now; selectedRecipes.delete(recipeId);
       commit(state, { message: "Recipe deleted." });
     }
   });
@@ -816,6 +822,17 @@ function bindEvents() {
   dom.detailAddToGroceryButton.addEventListener("click", () => addSelectedRecipesToGrocery([detailRecipeId]));
 
   document.querySelector("#groceryAddForm").addEventListener("submit", event => { event.preventDefault(); const input = document.querySelector("#groceryNameInput"); addManualGrocery(input.value); input.value = ""; input.focus(); });
+  dom.clearGroceryButton.addEventListener("click", async () => {
+    const itemCount = activeGrocery().length;
+    if (!itemCount) return;
+    const confirmed = await askConfirm("Clear the grocery list?", `All ${itemCount} ${itemCount === 1 ? "item" : "items"} will be removed. Your pantry will not change.`, "Clear all");
+    if (!confirmed) return;
+    const liveItems = activeGrocery();
+    if (!liveItems.length) return;
+    const now = Core.nowIso();
+    liveItems.forEach(item => { item.deletedAt = now; item.updatedAt = now; });
+    commit(state, { message: "Grocery list cleared." });
+  });
   dom.groceryList.addEventListener("click", async event => {
     const card = event.target.closest("[data-grocery-id]");
     const action = event.target.closest("[data-action]")?.dataset.action;
@@ -828,9 +845,13 @@ function bindEvents() {
       state = item.bought ? Core.stockPantry(state, item.name, now) : state;
       commit(state, { message: item.bought ? `${item.name} added to your pantry.` : `${item.name} marked as not bought.` });
     } else if (action === "delete-grocery") {
-      const confirmed = await askConfirm("Remove this grocery item?", `${item.name} will leave the grocery list. Its pantry status will not change.`, "Remove");
+      const itemId = item.id;
+      const itemName = item.name;
+      const confirmed = await askConfirm("Remove this grocery item?", `${itemName} will leave the grocery list. Its pantry status will not change.`, "Remove");
       if (!confirmed) return;
-      const now = Core.nowIso(); item.deletedAt = now; item.updatedAt = now;
+      const liveItem = state.grocery.find(record => record.id === itemId && !record.deletedAt);
+      if (!liveItem) return;
+      const now = Core.nowIso(); liveItem.deletedAt = now; liveItem.updatedAt = now;
       commit(state, { message: "Grocery item removed." });
     }
   });
@@ -847,9 +868,13 @@ function bindEvents() {
       const now = Core.nowIso(); item.status = item.status === "available" ? "finished" : "available"; item.finishedAt = item.status === "finished" ? now : null; item.stockedAt = item.status === "available" ? now : item.stockedAt; item.updatedAt = now;
       commit(state, { message: item.status === "finished" ? `${item.name} marked finished.` : `${item.name} is available again.` });
     } else if (action === "delete-pantry") {
-      const confirmed = await askConfirm("Remove this pantry item?", `${item.name} will be removed from the pantry. Grocery items will remain.`, "Remove");
+      const itemId = item.id;
+      const itemName = item.name;
+      const confirmed = await askConfirm("Remove this pantry item?", `${itemName} will be removed from the pantry. Grocery items will remain.`, "Remove");
       if (!confirmed) return;
-      const now = Core.nowIso(); item.deletedAt = now; item.updatedAt = now;
+      const liveItem = state.pantry.find(record => record.id === itemId && !record.deletedAt);
+      if (!liveItem) return;
+      const now = Core.nowIso(); liveItem.deletedAt = now; liveItem.updatedAt = now;
       commit(state, { message: "Pantry item removed." });
     }
   });

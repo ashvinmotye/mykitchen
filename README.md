@@ -10,6 +10,7 @@ A plain HTML, CSS and JavaScript PWA for recipes, grocery lists and pantry track
 - Recipe filtering by category
 - Multi-recipe selection that adds each ingredient once to the grocery list
 - Manual grocery-list additions
+- One-tap clearing for the full grocery list, with confirmation
 - Grocery items remain visible and show an **In pantry** badge when applicable
 - Ticking a grocery item adds or refreshes the matching pantry item
 - Pantry items can be marked finished, restored or removed

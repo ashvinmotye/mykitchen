@@ -166,7 +166,10 @@
     for (const record of [...(localRecords || []), ...(remoteRecords || [])]) {
       if (!record?.id) continue;
       const existing = merged.get(record.id);
-      if (!existing || timestamp(record.updatedAt) >= timestamp(existing.updatedAt)) merged.set(record.id, clone(record));
+      const recordTime = timestamp(record.updatedAt);
+      const existingTime = timestamp(existing?.updatedAt);
+      const tombstoneWinsTie = existing && recordTime === existingTime && record.deletedAt && !existing.deletedAt;
+      if (!existing || recordTime > existingTime || tombstoneWinsTie) merged.set(record.id, clone(record));
     }
     return [...merged.values()].sort((a, b) => timestamp(b.updatedAt) - timestamp(a.updatedAt));
   }
