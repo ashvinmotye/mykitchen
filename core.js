@@ -258,6 +258,37 @@
     return state;
   }
 
+  function mergeRecipeIngredients(inputState, ingredientNames, keepName, at = nowIso()) {
+    const state = hydrateState(inputState);
+    const selectedNames = new Set(cleanLines(ingredientNames, 500, 120));
+    const keeper = cleanText(keepName, 120);
+    if (!keeper || selectedNames.size < 2 || !selectedNames.has(keeper)) return state;
+
+    for (const recipe of active(state.recipes)) {
+      let keeperAdded = false;
+      let changed = false;
+      const nextIngredients = [];
+      for (const ingredient of recipe.ingredients) {
+        if (!selectedNames.has(ingredient)) {
+          nextIngredients.push(ingredient);
+          continue;
+        }
+        if (!keeperAdded) {
+          nextIngredients.push(keeper);
+          keeperAdded = true;
+        } else {
+          changed = true;
+        }
+        if (ingredient !== keeper) changed = true;
+      }
+      if (changed) {
+        recipe.ingredients = nextIngredients;
+        recipe.updatedAt = at;
+      }
+    }
+    return state;
+  }
+
   const api = {
     SCHEMA_VERSION,
     EPOCH,
@@ -279,7 +310,8 @@
     active,
     pantryHas,
     addRecipesToGrocery,
-    stockPantry
+    stockPantry,
+    mergeRecipeIngredients
   };
 
   root.MyKitchenCore = api;

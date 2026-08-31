@@ -12,7 +12,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
-  <link rel="stylesheet" href="./styles.css?v=3" />
+  <link rel="stylesheet" href="./styles.css?v=4" />
 </head>
 <body>
   <svg class="icon-sprite" aria-hidden="true" focusable="false">
@@ -38,6 +38,9 @@
     <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7L8 5Z"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2"/></symbol>
+    <symbol id="i-merge" viewBox="0 0 24 24"><path d="M5 5h3a4 4 0 0 1 4 4v10M5 19h3a4 4 0 0 0 4-4V9a4 4 0 0 1 4-4h3"/><path d="m16 2 3 3-3 3"/></symbol>
   </svg>
 
   <section id="authScreen" class="auth-screen" aria-labelledby="authTitle">
@@ -143,7 +146,7 @@
         </section>
 
         <section id="view-pantry" class="view" aria-labelledby="pantryTitle">
-          <div class="page-head"><div><h1 id="pantryTitle">Pantry</h1><p>Ticking a grocery item automatically brings it here.</p></div></div>
+          <div class="page-head"><div><h1 id="pantryTitle">Pantry</h1><p>Ticking a grocery item automatically brings it here.</p></div><button id="openPantryOrganiserButton" class="button secondary" type="button"><svg><use href="#i-list"></use></svg>Organise from ingredients</button></div>
           <form id="pantryAddForm" class="quick-add">
             <label><span>Add what you already have</span><input id="pantryNameInput" maxlength="120" autocomplete="off" placeholder="e.g. Basmati rice" required /></label>
             <button class="button primary" type="submit"><svg><use href="#i-plus"></use></svg>Add to pantry</button>
@@ -171,6 +174,10 @@
                 <button data-theme-choice="dark" type="button"><svg><use href="#i-moon"></use></svg>Dark</button>
               </div>
             </section>
+            <section class="settings-card wide-card ingredient-tools-card">
+              <div class="settings-card-head"><div><p class="eyebrow">INGREDIENT LIBRARY</p><h2>Tidy ingredient names</h2><p>Review every ingredient A–Z, find duplicate spellings and merge them across all recipes.</p></div></div>
+              <button id="openIngredientReviewButton" class="button secondary" type="button"><svg><use href="#i-merge"></use></svg>Review ingredients</button>
+            </section>
             <section class="settings-card wide-card">
               <div class="settings-card-head"><div><p class="eyebrow">ACCOUNT &amp; CLOUD</p><h2>Automatic sync</h2><p>myKitchen uses the same Supabase account as Forge and Level90.</p></div><span id="settingsConnectionStatus" class="status-badge">Connected</span></div>
               <div class="account-row"><div><small>Signed in as</small><strong id="accountEmail">—</strong></div><button id="signOutButton" class="button ghost" type="button">Sign out</button></div>
@@ -186,6 +193,51 @@
               </div>
             </section>
           </div>
+        </section>
+
+        <section id="view-ingredient-review" class="view" aria-labelledby="ingredientReviewTitle">
+          <div class="page-head"><div><p class="eyebrow">INGREDIENT LIBRARY</p><h1 id="ingredientReviewTitle">Review ingredients</h1><p>Select duplicate names, then choose the one spelling you want every recipe to keep.</p></div><button id="backToSettingsButton" class="button secondary" type="button"><svg><use href="#i-back"></use></svg>Back to settings</button></div>
+          <div class="manager-summary two-column-summary">
+            <div><strong id="ingredientReviewTotal">0</strong><span>unique ingredient names</span></div>
+            <div><strong id="ingredientReviewDuplicateCount">0</strong><span>possible duplicate groups</span></div>
+          </div>
+          <div class="manager-toolbar">
+            <label class="search-box"><span class="visually-hidden">Search ingredients</span><svg><use href="#i-search"></use></svg><input id="ingredientReviewSearch" type="search" autocomplete="off" placeholder="Search ingredients…" /></label>
+            <div class="filter-row compact-filter-row" role="group" aria-label="Ingredient review filter">
+              <button class="filter-pill is-active" data-ingredient-review-filter="all" type="button">All</button>
+              <button class="filter-pill" data-ingredient-review-filter="duplicates" type="button">Possible duplicates</button>
+            </div>
+          </div>
+          <div id="ingredientMergeBar" class="manager-action-bar" hidden>
+            <div class="manager-action-copy"><strong><span id="ingredientMergeCount">0</span> selected</strong><span id="ingredientMergeHint">Select at least two names to merge.</span></div>
+            <label class="keep-select">Keep as<select id="ingredientKeepSelect" aria-label="Ingredient name to keep"></select></label>
+            <div class="manager-action-buttons"><button id="clearIngredientSelectionButton" class="button ghost" type="button">Clear</button><button id="mergeIngredientsButton" class="button primary" type="button" disabled><svg><use href="#i-merge"></use></svg>Merge selected</button></div>
+          </div>
+          <div id="ingredientReviewList" class="ingredient-manager-list"></div>
+          <div id="ingredientReviewEmpty" class="empty-state compact" hidden><h2>No ingredients found</h2><p>Add ingredients to your recipes, or try another filter.</p></div>
+        </section>
+
+        <section id="view-pantry-organiser" class="view" aria-labelledby="pantryOrganiserTitle">
+          <div class="page-head"><div><p class="eyebrow">PANTRY HELPER</p><h1 id="pantryOrganiserTitle">Organise from recipes</h1><p>Review every recipe ingredient A–Z and select what you already have at home.</p></div><button id="backToPantryButton" class="button secondary" type="button"><svg><use href="#i-back"></use></svg>Back to pantry</button></div>
+          <div class="manager-summary">
+            <div><strong id="pantryOrganiserTotal">0</strong><span>recipe ingredients</span></div>
+            <div><strong id="pantryOrganiserInPantry">0</strong><span>already in pantry</span></div>
+            <div><strong id="pantryOrganiserRemaining">0</strong><span>available to add</span></div>
+          </div>
+          <div class="manager-toolbar">
+            <label class="search-box"><span class="visually-hidden">Search recipe ingredients</span><svg><use href="#i-search"></use></svg><input id="pantryOrganiserSearch" type="search" autocomplete="off" placeholder="Search recipe ingredients…" /></label>
+            <div class="filter-row compact-filter-row" role="group" aria-label="Pantry organiser filter">
+              <button class="filter-pill is-active" data-pantry-organiser-filter="all" type="button">All</button>
+              <button class="filter-pill" data-pantry-organiser-filter="missing" type="button">Not in pantry</button>
+              <button class="filter-pill" data-pantry-organiser-filter="available" type="button">In pantry</button>
+            </div>
+          </div>
+          <div id="pantryOrganiserActionBar" class="manager-action-bar compact-action-bar" hidden>
+            <div class="manager-action-copy"><strong><span id="pantryOrganiserSelectedCount">0</span> selected</strong><span>Finished items will be marked available again.</span></div>
+            <div class="manager-action-buttons"><button id="clearPantryOrganiserSelectionButton" class="button ghost" type="button">Clear</button><button id="addPantryOrganiserSelectionButton" class="button primary" type="button"><svg><use href="#i-pantry"></use></svg>Add to pantry</button></div>
+          </div>
+          <div id="pantryOrganiserList" class="ingredient-manager-list"></div>
+          <div id="pantryOrganiserEmpty" class="empty-state compact" hidden><h2>No ingredients found</h2><p>Add ingredients to your recipes, or try another filter.</p></div>
         </section>
       </main>
 
@@ -240,7 +292,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./core.js?v=3" defer></script>
-  <script src="./app.js?v=3" defer></script>
+  <script src="./core.js?v=4" defer></script>
+  <script src="./app.js?v=4" defer></script>
 </body>
 </html>

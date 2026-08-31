@@ -14,6 +14,8 @@ A plain HTML, CSS and JavaScript PWA for recipes, grocery lists and pantry track
 - Grocery items remain visible and show an **In pantry** badge when applicable
 - Ticking a grocery item adds or refreshes the matching pantry item
 - Pantry items can be marked finished, restored or removed
+- Ingredient review workspace for finding duplicate names and merging them across every recipe
+- Pantry organiser for selecting recipe ingredients already available at home
 - Manual pantry additions for items already at home
 - First-use name prompt
 - Light and dark themes

@@ -45,6 +45,18 @@ const dom = {
   pantryEmpty: document.querySelector("#pantryEmpty"),
   availablePantryCount: document.querySelector("#availablePantryCount"),
   finishedPantryCount: document.querySelector("#finishedPantryCount"),
+  openPantryOrganiserButton: document.querySelector("#openPantryOrganiserButton"),
+  pantryOrganiserSearch: document.querySelector("#pantryOrganiserSearch"),
+  pantryOrganiserList: document.querySelector("#pantryOrganiserList"),
+  pantryOrganiserEmpty: document.querySelector("#pantryOrganiserEmpty"),
+  pantryOrganiserTotal: document.querySelector("#pantryOrganiserTotal"),
+  pantryOrganiserInPantry: document.querySelector("#pantryOrganiserInPantry"),
+  pantryOrganiserRemaining: document.querySelector("#pantryOrganiserRemaining"),
+  pantryOrganiserActionBar: document.querySelector("#pantryOrganiserActionBar"),
+  pantryOrganiserSelectedCount: document.querySelector("#pantryOrganiserSelectedCount"),
+  addPantryOrganiserSelectionButton: document.querySelector("#addPantryOrganiserSelectionButton"),
+  clearPantryOrganiserSelectionButton: document.querySelector("#clearPantryOrganiserSelectionButton"),
+  backToPantryButton: document.querySelector("#backToPantryButton"),
   profileNameInput: document.querySelector("#profileNameInput"),
   accountEmail: document.querySelector("#accountEmail"),
   cloudSyncStatus: document.querySelector("#cloudSyncStatus"),
@@ -52,6 +64,19 @@ const dom = {
   accountMessage: document.querySelector("#accountMessage"),
   syncNowButton: document.querySelector("#syncNowButton"),
   signOutButton: document.querySelector("#signOutButton"),
+  openIngredientReviewButton: document.querySelector("#openIngredientReviewButton"),
+  ingredientReviewSearch: document.querySelector("#ingredientReviewSearch"),
+  ingredientReviewList: document.querySelector("#ingredientReviewList"),
+  ingredientReviewEmpty: document.querySelector("#ingredientReviewEmpty"),
+  ingredientReviewTotal: document.querySelector("#ingredientReviewTotal"),
+  ingredientReviewDuplicateCount: document.querySelector("#ingredientReviewDuplicateCount"),
+  ingredientMergeBar: document.querySelector("#ingredientMergeBar"),
+  ingredientMergeCount: document.querySelector("#ingredientMergeCount"),
+  ingredientMergeHint: document.querySelector("#ingredientMergeHint"),
+  ingredientKeepSelect: document.querySelector("#ingredientKeepSelect"),
+  mergeIngredientsButton: document.querySelector("#mergeIngredientsButton"),
+  clearIngredientSelectionButton: document.querySelector("#clearIngredientSelectionButton"),
+  backToSettingsButton: document.querySelector("#backToSettingsButton"),
   nameDialog: document.querySelector("#nameDialog"),
   firstNameInput: document.querySelector("#firstNameInput"),
   recipeDialog: document.querySelector("#recipeDialog"),
@@ -97,7 +122,14 @@ let syncTimer = null;
 let currentView = "recipes";
 let pantryFilter = "available";
 let recipeCategoryFilter = "all";
+let ingredientReviewFilter = "all";
+let pantryOrganiserFilter = "all";
 let selectedRecipes = new Set();
+let ingredientReviewSelection = new Set();
+let pantryOrganiserSelection = new Set();
+let ingredientKeepName = "";
+let ingredientReviewLookup = new Map();
+let pantryOrganiserLookup = new Map();
 let detailRecipeId = null;
 let confirmResolver = null;
 let toastTimer = null;
@@ -189,13 +221,141 @@ function renderCategoryOptions(recipes) {
   dom.recipeCategoryFilter.value = recipeCategoryFilter;
 }
 
+function ingredientCatalogue() {
+  const byName = new Map();
+  for (const recipe of activeRecipes()) {
+    const seenInRecipe = new Set();
+    for (const rawIngredient of recipe.ingredients) {
+      const name = Core.cleanText(rawIngredient, 120);
+      if (!name) continue;
+      if (!byName.has(name)) byName.set(name, { name, normalizedName: Core.normalizeName(name), recipeIds: new Set(), recipeTitles: new Set() });
+      if (seenInRecipe.has(name)) continue;
+      seenInRecipe.add(name);
+      const item = byName.get(name);
+      item.recipeIds.add(recipe.id);
+      item.recipeTitles.add(recipe.title);
+    }
+  }
+
+  const duplicateGroups = new Map();
+  for (const item of byName.values()) {
+    if (!duplicateGroups.has(item.normalizedName)) duplicateGroups.set(item.normalizedName, []);
+    duplicateGroups.get(item.normalizedName).push(item.name);
+  }
+
+  return [...byName.values()]
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.name.localeCompare(b.name))
+    .map((item, index) => ({
+      id: `ingredient-${index}`,
+      name: item.name,
+      normalizedName: item.normalizedName,
+      recipeCount: item.recipeIds.size,
+      recipeTitles: [...item.recipeTitles].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })),
+      duplicateGroupSize: duplicateGroups.get(item.normalizedName)?.length || 1
+    }));
+}
+
+function ingredientRecipeSummary(item) {
+  const visibleTitles = item.recipeTitles.slice(0, 3);
+  const extra = item.recipeTitles.length - visibleTitles.length;
+  return `${item.recipeCount} ${item.recipeCount === 1 ? "recipe" : "recipes"}${visibleTitles.length ? ` · ${visibleTitles.join(", ")}${extra > 0 ? ` +${extra}` : ""}` : ""}`;
+}
+
+function updateIngredientMergeBar(items) {
+  const validNames = new Set(items.map(item => item.name));
+  ingredientReviewSelection = new Set([...ingredientReviewSelection].filter(name => validNames.has(name)));
+  const selectedNames = [...ingredientReviewSelection].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  if (!ingredientReviewSelection.has(ingredientKeepName)) ingredientKeepName = selectedNames[0] || "";
+  dom.ingredientMergeBar.hidden = selectedNames.length === 0;
+  dom.ingredientMergeCount.textContent = String(selectedNames.length);
+  dom.ingredientMergeHint.textContent = selectedNames.length < 2 ? "Select at least two names to merge." : "Choose the spelling every recipe should keep.";
+  dom.ingredientKeepSelect.innerHTML = selectedNames.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+  dom.ingredientKeepSelect.value = ingredientKeepName;
+  dom.ingredientKeepSelect.disabled = selectedNames.length < 2;
+  dom.mergeIngredientsButton.disabled = selectedNames.length < 2;
+}
+
+function renderIngredientReview() {
+  const items = ingredientCatalogue();
+  const duplicateGroupCount = new Set(items.filter(item => item.duplicateGroupSize > 1).map(item => item.normalizedName)).size;
+  dom.ingredientReviewTotal.textContent = String(items.length);
+  dom.ingredientReviewDuplicateCount.textContent = String(duplicateGroupCount);
+  document.querySelectorAll("[data-ingredient-review-filter]").forEach(button => button.classList.toggle("is-active", button.dataset.ingredientReviewFilter === ingredientReviewFilter));
+  updateIngredientMergeBar(items);
+
+  const query = dom.ingredientReviewSearch.value.trim().toLocaleLowerCase();
+  const visibleItems = items.filter(item => {
+    const matchesSearch = !query || [item.name, ...item.recipeTitles].join(" ").toLocaleLowerCase().includes(query);
+    const matchesFilter = ingredientReviewFilter === "all" || item.duplicateGroupSize > 1;
+    return matchesSearch && matchesFilter;
+  });
+  ingredientReviewLookup = new Map(items.map(item => [item.id, item.name]));
+  dom.ingredientReviewList.innerHTML = visibleItems.map(item => {
+    const selected = ingredientReviewSelection.has(item.name);
+    return `<button class="ingredient-manager-item${selected ? " is-selected" : ""}" type="button" data-review-ingredient-id="${item.id}" aria-pressed="${selected}" aria-label="${selected ? "Deselect" : "Select"} ${escapeHtml(item.name)}">
+      <span class="ingredient-selection-mark"><svg><use href="#i-check"></use></svg></span>
+      <span class="ingredient-manager-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(ingredientRecipeSummary(item))}</small></span>
+      ${item.duplicateGroupSize > 1 ? '<span class="ingredient-state-badge is-duplicate">Possible duplicate</span>' : ""}
+    </button>`;
+  }).join("");
+  dom.ingredientReviewList.hidden = visibleItems.length === 0;
+  dom.ingredientReviewEmpty.hidden = visibleItems.length !== 0;
+}
+
+function pantryIngredientStatus(name) {
+  const normalized = Core.normalizeName(name);
+  const matches = activePantry().filter(item => item.normalizedName === normalized);
+  if (matches.some(item => item.status === "available")) return "available";
+  if (matches.some(item => item.status === "finished")) return "finished";
+  return "missing";
+}
+
+function renderPantryOrganiser() {
+  const items = ingredientCatalogue().map(item => ({ ...item, pantryStatus: pantryIngredientStatus(item.name) }));
+  const validSelectableNames = new Set(items.filter(item => item.pantryStatus !== "available").map(item => item.name));
+  pantryOrganiserSelection = new Set([...pantryOrganiserSelection].filter(name => validSelectableNames.has(name)));
+  const inPantryCount = items.filter(item => item.pantryStatus === "available").length;
+  dom.pantryOrganiserTotal.textContent = String(items.length);
+  dom.pantryOrganiserInPantry.textContent = String(inPantryCount);
+  dom.pantryOrganiserRemaining.textContent = String(items.length - inPantryCount);
+  dom.pantryOrganiserActionBar.hidden = pantryOrganiserSelection.size === 0;
+  dom.pantryOrganiserSelectedCount.textContent = String(pantryOrganiserSelection.size);
+  document.querySelectorAll("[data-pantry-organiser-filter]").forEach(button => button.classList.toggle("is-active", button.dataset.pantryOrganiserFilter === pantryOrganiserFilter));
+
+  const query = dom.pantryOrganiserSearch.value.trim().toLocaleLowerCase();
+  const visibleItems = items.filter(item => {
+    const matchesSearch = !query || [item.name, ...item.recipeTitles].join(" ").toLocaleLowerCase().includes(query);
+    const matchesFilter = pantryOrganiserFilter === "all"
+      || (pantryOrganiserFilter === "missing" && item.pantryStatus !== "available")
+      || (pantryOrganiserFilter === "available" && item.pantryStatus === "available");
+    return matchesSearch && matchesFilter;
+  });
+  pantryOrganiserLookup = new Map(items.map(item => [item.id, item.name]));
+  dom.pantryOrganiserList.innerHTML = visibleItems.map(item => {
+    const selected = pantryOrganiserSelection.has(item.name);
+    const available = item.pantryStatus === "available";
+    const statusLabel = available ? "In pantry" : item.pantryStatus === "finished" ? "Finished" : "Not in pantry";
+    const statusClass = available ? "is-available" : item.pantryStatus === "finished" ? "is-finished" : "";
+    return `<button class="ingredient-manager-item${selected ? " is-selected" : ""}${available ? " is-available" : ""}" type="button" data-pantry-ingredient-id="${item.id}" aria-pressed="${selected}" aria-label="${available ? `${escapeHtml(item.name)} is already in the pantry` : `${selected ? "Deselect" : "Select"} ${escapeHtml(item.name)}`}" ${available ? "disabled" : ""}>
+      <span class="ingredient-selection-mark"><svg><use href="#i-check"></use></svg></span>
+      <span class="ingredient-manager-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(ingredientRecipeSummary(item))}</small></span>
+      <span class="ingredient-state-badge ${statusClass}">${statusLabel}</span>
+    </button>`;
+  }).join("");
+  dom.pantryOrganiserList.hidden = visibleItems.length === 0;
+  dom.pantryOrganiserEmpty.hidden = visibleItems.length !== 0;
+}
+
 function setView(view, options = {}) {
-  const next = ["recipes", "grocery", "pantry", "settings"].includes(view) ? view : "recipes";
+  const next = ["recipes", "grocery", "pantry", "settings", "ingredient-review", "pantry-organiser"].includes(view) ? view : "recipes";
   currentView = next;
   document.querySelectorAll(".view").forEach(section => section.classList.toggle("is-active", section.id === `view-${next}`));
-  document.querySelectorAll(".nav-button[data-view]").forEach(button => button.classList.toggle("is-active", button.dataset.view === next));
-  const eyebrow = { recipes: "RECIPE BOX", grocery: "SHOPPING RUN", pantry: "WHAT'S AT HOME", settings: "MY KITCHEN" }[next];
+  const navView = next === "ingredient-review" ? "settings" : next === "pantry-organiser" ? "pantry" : next;
+  document.querySelectorAll(".nav-button[data-view]").forEach(button => button.classList.toggle("is-active", button.dataset.view === navView));
+  const eyebrow = { recipes: "RECIPE BOX", grocery: "SHOPPING RUN", pantry: "WHAT'S AT HOME", settings: "MY KITCHEN", "ingredient-review": "TIDY THE SHELF", "pantry-organiser": "STOCK THE PANTRY" }[next];
   dom.viewEyebrow.textContent = eyebrow;
+  if (next === "ingredient-review") renderIngredientReview();
+  if (next === "pantry-organiser") renderPantryOrganiser();
   if (!options.silentHash) history.replaceState(null, "", `${location.pathname}${location.search}#${next}`);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -313,6 +473,8 @@ function renderAll() {
   renderRecipeGrid();
   renderGrocery();
   renderPantry();
+  renderIngredientReview();
+  renderPantryOrganiser();
   renderAccount();
   applyTheme(state.profile.theme);
 }
@@ -486,6 +648,9 @@ async function importBackup(file) {
     const confirmed = await askConfirm("Replace this kitchen?", "The imported recipes, grocery list and pantry will replace the current data for this account. A fresh backup is recommended first.", "Import backup");
     if (!confirmed) return;
     selectedRecipes.clear();
+    ingredientReviewSelection.clear();
+    pantryOrganiserSelection.clear();
+    ingredientKeepName = "";
     commit(prepareReplacement(source), { message: "Backup imported. Syncing your kitchen…" });
   } catch (error) {
     showToast(error.message || "The backup could not be imported.");
@@ -606,6 +771,9 @@ async function showAuthenticatedApp(session, options = {}) {
     activeUserId = user.id;
     state = loadUserState(user.id);
     selectedRecipes.clear();
+    ingredientReviewSelection.clear();
+    pantryOrganiserSelection.clear();
+    ingredientKeepName = "";
     applyTheme(state.profile.theme);
   }
   dom.authScreen.hidden = true;
@@ -768,6 +936,79 @@ function bindEvents() {
   dom.recipeCategoryFilter.addEventListener("change", () => { recipeCategoryFilter = dom.recipeCategoryFilter.value; renderRecipeGrid(); });
   document.querySelector("#clearSelectionButton").addEventListener("click", () => { selectedRecipes.clear(); renderRecipeGrid(); });
   document.querySelector("#addSelectedToGroceryButton").addEventListener("click", () => addSelectedRecipesToGrocery());
+  dom.openIngredientReviewButton.addEventListener("click", () => setView("ingredient-review"));
+  dom.backToSettingsButton.addEventListener("click", () => setView("settings"));
+  dom.openPantryOrganiserButton.addEventListener("click", () => setView("pantry-organiser"));
+  dom.backToPantryButton.addEventListener("click", () => setView("pantry"));
+
+  dom.ingredientReviewSearch.addEventListener("input", renderIngredientReview);
+  document.querySelectorAll("[data-ingredient-review-filter]").forEach(button => button.addEventListener("click", () => {
+    ingredientReviewFilter = button.dataset.ingredientReviewFilter;
+    renderIngredientReview();
+  }));
+  dom.ingredientReviewList.addEventListener("click", event => {
+    const row = event.target.closest("[data-review-ingredient-id]");
+    const name = row ? ingredientReviewLookup.get(row.dataset.reviewIngredientId) : null;
+    if (!name) return;
+    if (ingredientReviewSelection.has(name)) ingredientReviewSelection.delete(name);
+    else ingredientReviewSelection.add(name);
+    renderIngredientReview();
+  });
+  dom.ingredientKeepSelect.addEventListener("change", () => { ingredientKeepName = dom.ingredientKeepSelect.value; });
+  dom.clearIngredientSelectionButton.addEventListener("click", () => {
+    ingredientReviewSelection.clear();
+    ingredientKeepName = "";
+    renderIngredientReview();
+  });
+  dom.mergeIngredientsButton.addEventListener("click", async () => {
+    const selectedNames = [...ingredientReviewSelection];
+    const keepName = ingredientKeepName;
+    if (selectedNames.length < 2 || !selectedNames.includes(keepName)) return;
+    const affectedRecipes = activeRecipes().filter(recipe => recipe.ingredients.some(ingredient => selectedNames.includes(ingredient) && ingredient !== keepName)).length;
+    const replacedNames = selectedNames.filter(name => name !== keepName);
+    const confirmed = await askConfirm("Merge these ingredient names?", `${replacedNames.join(", ")} will become ${keepName} in ${affectedRecipes} ${affectedRecipes === 1 ? "recipe" : "recipes"}. Your grocery list and pantry will not change.`, "Merge");
+    if (!confirmed) return;
+    state = Core.mergeRecipeIngredients(state, selectedNames, keepName, Core.nowIso());
+    ingredientReviewSelection.clear();
+    ingredientKeepName = "";
+    commit(state, { message: `Ingredient names merged as ${keepName}.` });
+  });
+
+  dom.pantryOrganiserSearch.addEventListener("input", renderPantryOrganiser);
+  document.querySelectorAll("[data-pantry-organiser-filter]").forEach(button => button.addEventListener("click", () => {
+    pantryOrganiserFilter = button.dataset.pantryOrganiserFilter;
+    renderPantryOrganiser();
+  }));
+  dom.pantryOrganiserList.addEventListener("click", event => {
+    const row = event.target.closest("[data-pantry-ingredient-id]");
+    const name = row ? pantryOrganiserLookup.get(row.dataset.pantryIngredientId) : null;
+    if (!name || row.disabled || Core.pantryHas(state, name)) return;
+    if (pantryOrganiserSelection.has(name)) pantryOrganiserSelection.delete(name);
+    else pantryOrganiserSelection.add(name);
+    renderPantryOrganiser();
+  });
+  dom.clearPantryOrganiserSelectionButton.addEventListener("click", () => {
+    pantryOrganiserSelection.clear();
+    renderPantryOrganiser();
+  });
+  dom.addPantryOrganiserSelectionButton.addEventListener("click", () => {
+    const selectedNames = [...pantryOrganiserSelection].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    const uniqueNames = new Map();
+    for (const name of selectedNames) {
+      const normalized = Core.normalizeName(name);
+      if (normalized && !Core.pantryHas(state, name) && !uniqueNames.has(normalized)) uniqueNames.set(normalized, name);
+    }
+    if (!uniqueNames.size) {
+      pantryOrganiserSelection.clear();
+      renderPantryOrganiser();
+      return;
+    }
+    const now = Core.nowIso();
+    for (const name of uniqueNames.values()) state = Core.stockPantry(state, name, now);
+    pantryOrganiserSelection.clear();
+    const count = uniqueNames.size;
+    commit(state, { message: `${count} ${count === 1 ? "ingredient" : "ingredients"} added to your pantry.` });
+  });
 
   dom.recipeGrid.addEventListener("click", async event => {
     const card = event.target.closest("[data-recipe-id]");
