@@ -5,6 +5,9 @@ A plain HTML, CSS and JavaScript PWA for recipes, grocery lists and pantry track
 ## What is included
 
 - Recipe creation, editing, viewing, searching and deletion
+- Multiple optional YouTube reference links per recipe
+- Plain-text recipe sharing through the device share sheet, with copy fallback
+- Recipe filtering by category
 - Multi-recipe selection that adds each ingredient once to the grocery list
 - Manual grocery-list additions
 - Grocery items remain visible and show an **In pantry** badge when applicable
@@ -25,8 +28,11 @@ Quantities are intentionally not stored or calculated. Each ingredient is treate
 1. Open the existing Supabase project used by Forge and Level90.
 2. Open **SQL Editor**.
 3. Run `supabase/migrations/20260830_create_mykitchen.sql` once.
-4. Deploy all app files from the ZIP to the myKitchen website.
-5. Sign in with the same email/password account used by Forge and Level90.
+4. Run `supabase/migrations/20260831_add_mykitchen_youtube_links.sql` once. It is safe for both fresh and existing installations.
+5. Deploy all app files from the ZIP to the myKitchen website.
+6. Sign in with the same email/password account used by Forge and Level90.
+
+If myKitchen was already installed, only the `20260831_add_mykitchen_youtube_links.sql` migration is new.
 
 The migration creates four myKitchen-only tables with Row Level Security. It does not modify Forge or Level90 tables.
 

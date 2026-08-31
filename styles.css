@@ -146,6 +146,9 @@ html[data-theme="dark"] .theme-toggle .sun-icon, html[data-theme="dark"] #themeT
 .search-box { flex: 1; position: relative; }
 .search-box svg { position: absolute; left: 14px; top: 50%; width: 19px; height: 19px; transform: translateY(-31%); color: var(--muted); }
 .search-box input { min-height: 50px; margin: 0; padding-left: 44px; border-radius: 17px; }
+.category-filter { width: min(230px, 30vw); position: relative; flex: none; }
+.category-filter > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.category-filter select { width: 100%; min-height: 50px; border: 1px solid var(--line); border-radius: 17px; padding: 0 40px 0 14px; background-color: var(--surface-strong); color: var(--ink); cursor: pointer; font: inherit; font-weight: 800; }
 .soft-count { flex: none; color: var(--muted); font-size: .82rem; font-weight: 800; }
 .selection-bar { position: sticky; z-index: 10; top: 98px; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 0 18px; padding: 12px 14px 12px 18px; border: 1px solid color-mix(in srgb, var(--butter) 64%, var(--line)); border-radius: 18px; background: color-mix(in srgb, var(--butter) 25%, var(--surface)); box-shadow: var(--shadow-small); }
 .selection-bar > div { display: flex; gap: 8px; }
@@ -263,6 +266,12 @@ html[data-theme="dark"] .filter-pill.is-active { color: #30213a; }
 .step-list li { counter-increment: step; position: relative; padding: 0 0 13px 42px; border-bottom: 1px dashed var(--line); line-height: 1.55; }
 .step-list li::before { content: counter(step); position: absolute; left: 0; top: -2px; width: 29px; height: 29px; display: grid; place-items: center; border-radius: 10px 8px 11px 9px; background: var(--butter); color: #51294f; font-weight: 900; transform: rotate(-3deg); }
 .detail-notes { margin: 22px 0 0; border-radius: 14px; padding: 14px 16px; background: var(--surface-soft); color: var(--muted); line-height: 1.5; }
+.detail-references { margin-top: 22px; }
+.detail-references h3 { margin-bottom: 10px; color: var(--tomato); font-size: 1rem; letter-spacing: -.01em; }
+.reference-list { display: flex; flex-wrap: wrap; gap: 9px; }
+.reference-link { max-width: 100%; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 13px; padding: 9px 12px; background: var(--surface-strong); color: var(--aubergine); font-size: .8rem; font-weight: 900; text-decoration: none; }
+.reference-link:hover { border-color: var(--tomato); color: var(--tomato); }
+.reference-link svg { width: 17px; height: 17px; flex: none; fill: currentColor; stroke: none; }
 .confirm-dialog { width: min(420px, calc(100% - 30px)); overflow: visible; text-align: center; }
 .confirm-dialog p { color: var(--muted); line-height: 1.5; }
 .confirm-dialog .dialog-actions { justify-content: center; }
@@ -304,9 +313,10 @@ html[data-theme="dark"] .filter-pill.is-active { color: #30213a; }
   .auth-brand { margin-bottom: 34px; }
   .page-head { align-items: flex-start; }
   .page-head p { max-width: 28rem; }
-  .page-head > .button { width: 46px; min-width: 46px; padding: 0; font-size: 0; }
-  .page-head > .button svg { width: 22px; height: 22px; }
+  .page-head > .button { width: 48px; height: 48px; min-width: 48px; min-height: 48px; flex: 0 0 48px; padding: 0; font-size: 0; line-height: 0; }
+  .page-head > .button svg { display: block; width: 22px; height: 22px; margin: 0; transform: translateY(2px); }
   .recipe-toolbar { align-items: stretch; flex-direction: column; gap: 7px; }
+  .category-filter { width: 100%; }
   .soft-count { padding-left: 4px; }
   .recipe-grid, .pantry-grid { grid-template-columns: 1fr; }
   .recipe-card { min-height: 208px; }

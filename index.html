@@ -12,7 +12,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
-  <link rel="stylesheet" href="./styles.css?v=1" />
+  <link rel="stylesheet" href="./styles.css?v=2" />
 </head>
 <body>
   <svg class="icon-sprite" aria-hidden="true" focusable="false">
@@ -34,6 +34,8 @@
     <symbol id="i-sync" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 8a7 7 0 0 1 11.7-2.1L20 8M4 16l2.2 2.1A7 7 0 0 0 17.9 16"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></symbol>
     <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M4 19h16"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.1M8.7 13.3l6.6 4.1"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7L8 5Z"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
   </svg>
@@ -110,6 +112,7 @@
           </div>
           <div class="recipe-toolbar">
             <label class="search-box"><svg><use href="#i-search"></use></svg><input id="recipeSearch" type="search" placeholder="Search recipes or ingredients" aria-label="Search recipes or ingredients" /></label>
+            <label class="category-filter"><span>Category</span><select id="recipeCategoryFilter" aria-label="Filter recipes by category"><option value="all">All categories</option></select></label>
             <span id="recipeCountLabel" class="soft-count">0 recipes</span>
           </div>
           <div id="selectionBar" class="selection-bar" hidden>
@@ -213,6 +216,7 @@
         <label>Category<input id="recipeCategoryInput" maxlength="36" placeholder="e.g. Dinner" /></label>
         <label class="span-2">Ingredients <small>One item per line—quantities are not needed.</small><textarea id="recipeIngredientsInput" rows="7" required placeholder="Pasta&#10;Tomatoes&#10;Parmesan"></textarea></label>
         <label class="span-2">Method <small>One step per line.</small><textarea id="recipeStepsInput" rows="7" placeholder="Boil the pasta&#10;Make the sauce&#10;Combine and serve"></textarea></label>
+        <label class="span-2">YouTube references <small>Optional. Add one YouTube link per line.</small><textarea id="recipeYoutubeLinksInput" rows="3" inputmode="url" autocapitalize="none" spellcheck="false" placeholder="https://youtu.be/…&#10;https://www.youtube.com/watch?v=…"></textarea></label>
         <label class="span-2">Notes<textarea id="recipeNotesInput" rows="3" maxlength="500" placeholder="Optional tips or substitutions"></textarea></label>
       </div>
       <div class="dialog-actions"><button class="button ghost" type="button" data-close-dialog="recipeDialog">Cancel</button><button class="button primary" type="submit">Save recipe</button></div>
@@ -223,8 +227,9 @@
     <div class="dialog-card">
       <div class="dialog-head"><div><p id="detailCategory" class="eyebrow">RECIPE</p><h2 id="detailTitle">Recipe title</h2></div><button class="icon-button dialog-close" type="button" data-close-dialog="recipeDetailDialog" aria-label="Close"><svg><use href="#i-close"></use></svg></button></div>
       <div class="detail-columns"><section><h3>Ingredients</h3><ul id="detailIngredients" class="ingredient-list"></ul></section><section><h3>Method</h3><ol id="detailSteps" class="step-list"></ol></section></div>
+      <section id="detailReferencesSection" class="detail-references" hidden><h3>YouTube references</h3><div id="detailReferences" class="reference-list"></div></section>
       <p id="detailNotes" class="detail-notes" hidden></p>
-      <div class="dialog-actions"><button id="detailEditButton" class="button secondary" type="button"><svg><use href="#i-edit"></use></svg>Edit recipe</button><button id="detailAddToGroceryButton" class="button primary" type="button"><svg><use href="#i-cart"></use></svg>Add ingredients</button></div>
+      <div class="dialog-actions"><button id="detailShareButton" class="button secondary" type="button"><svg><use href="#i-share"></use></svg>Share recipe</button><button id="detailEditButton" class="button secondary" type="button"><svg><use href="#i-edit"></use></svg>Edit recipe</button><button id="detailAddToGroceryButton" class="button primary" type="button"><svg><use href="#i-cart"></use></svg>Add ingredients</button></div>
     </div>
   </dialog>
 
@@ -235,7 +240,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./core.js?v=1" defer></script>
-  <script src="./app.js?v=1" defer></script>
+  <script src="./core.js?v=2" defer></script>
+  <script src="./app.js?v=2" defer></script>
 </body>
 </html>

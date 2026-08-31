@@ -29,6 +29,9 @@ create table if not exists public.mykitchen_recipes (
     check (jsonb_typeof(ingredients) = 'array'),
   steps jsonb not null default '[]'::jsonb
     check (jsonb_typeof(steps) = 'array'),
+  youtube_links jsonb not null default '[]'::jsonb
+    constraint mykitchen_recipes_youtube_links_array
+    check (jsonb_typeof(youtube_links) = 'array'),
   client_created_at timestamptz not null,
   client_updated_at timestamptz not null,
   deleted_at timestamptz,

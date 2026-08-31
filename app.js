@@ -27,6 +27,7 @@ const dom = {
   connectionPill: document.querySelector("#connectionPill"),
   themeToggle: document.querySelector("#themeToggle"),
   recipeSearch: document.querySelector("#recipeSearch"),
+  recipeCategoryFilter: document.querySelector("#recipeCategoryFilter"),
   recipeCountLabel: document.querySelector("#recipeCountLabel"),
   recipeGrid: document.querySelector("#recipeGrid"),
   recipesEmpty: document.querySelector("#recipesEmpty"),
@@ -61,13 +62,17 @@ const dom = {
   recipeCategoryInput: document.querySelector("#recipeCategoryInput"),
   recipeIngredientsInput: document.querySelector("#recipeIngredientsInput"),
   recipeStepsInput: document.querySelector("#recipeStepsInput"),
+  recipeYoutubeLinksInput: document.querySelector("#recipeYoutubeLinksInput"),
   recipeNotesInput: document.querySelector("#recipeNotesInput"),
   recipeDetailDialog: document.querySelector("#recipeDetailDialog"),
   detailCategory: document.querySelector("#detailCategory"),
   detailTitle: document.querySelector("#detailTitle"),
   detailIngredients: document.querySelector("#detailIngredients"),
   detailSteps: document.querySelector("#detailSteps"),
+  detailReferencesSection: document.querySelector("#detailReferencesSection"),
+  detailReferences: document.querySelector("#detailReferences"),
   detailNotes: document.querySelector("#detailNotes"),
+  detailShareButton: document.querySelector("#detailShareButton"),
   detailEditButton: document.querySelector("#detailEditButton"),
   detailAddToGroceryButton: document.querySelector("#detailAddToGroceryButton"),
   confirmDialog: document.querySelector("#confirmDialog"),
@@ -90,6 +95,7 @@ let syncRequested = false;
 let syncTimer = null;
 let currentView = "recipes";
 let pantryFilter = "available";
+let recipeCategoryFilter = "all";
 let selectedRecipes = new Set();
 let detailRecipeId = null;
 let confirmResolver = null;
@@ -165,6 +171,23 @@ function activeRecipes() { return Core.active(state.recipes); }
 function activeGrocery() { return Core.active(state.grocery); }
 function activePantry() { return Core.active(state.pantry); }
 
+function categoryKey(value) {
+  const category = Core.cleanText(value, 36);
+  return category ? category.toLocaleLowerCase() : "__uncategorized__";
+}
+
+function renderCategoryOptions(recipes) {
+  const categories = new Map();
+  for (const recipe of recipes) {
+    const key = categoryKey(recipe.category);
+    if (!categories.has(key)) categories.set(key, recipe.category || "Uncategorised");
+  }
+  if (recipeCategoryFilter !== "all" && !categories.has(recipeCategoryFilter)) recipeCategoryFilter = "all";
+  const sorted = [...categories.entries()].sort((a, b) => a[1].localeCompare(b[1], undefined, { sensitivity: "base" }));
+  dom.recipeCategoryFilter.innerHTML = `<option value="all">All categories</option>${sorted.map(([key, label]) => `<option value="${escapeHtml(key)}">${escapeHtml(label)}</option>`).join("")}`;
+  dom.recipeCategoryFilter.value = recipeCategoryFilter;
+}
+
 function setView(view, options = {}) {
   const next = ["recipes", "grocery", "pantry", "settings"].includes(view) ? view : "recipes";
   currentView = next;
@@ -178,11 +201,17 @@ function setView(view, options = {}) {
 
 function renderRecipeGrid() {
   const allRecipes = activeRecipes();
+  renderCategoryOptions(allRecipes);
   const query = dom.recipeSearch.value.trim().toLocaleLowerCase();
-  const recipes = allRecipes.filter(recipe => !query || [recipe.title, recipe.category, recipe.notes, ...recipe.ingredients].join(" ").toLocaleLowerCase().includes(query));
+  const recipes = allRecipes.filter(recipe => {
+    const matchesCategory = recipeCategoryFilter === "all" || categoryKey(recipe.category) === recipeCategoryFilter;
+    const matchesSearch = !query || [recipe.title, recipe.category, recipe.notes, ...recipe.ingredients, ...recipe.youtubeLinks].join(" ").toLocaleLowerCase().includes(query);
+    return matchesCategory && matchesSearch;
+  });
   const validIds = new Set(allRecipes.map(recipe => recipe.id));
   selectedRecipes = new Set([...selectedRecipes].filter(id => validIds.has(id)));
-  dom.recipeCountLabel.textContent = `${allRecipes.length} ${allRecipes.length === 1 ? "recipe" : "recipes"}`;
+  const filtering = Boolean(query) || recipeCategoryFilter !== "all";
+  dom.recipeCountLabel.textContent = filtering ? `${recipes.length} of ${allRecipes.length} recipes` : `${allRecipes.length} ${allRecipes.length === 1 ? "recipe" : "recipes"}`;
   dom.selectionBar.hidden = selectedRecipes.size === 0;
   dom.selectedRecipeCount.textContent = String(selectedRecipes.size);
   dom.recipeGrid.innerHTML = recipes.map(recipe => {
@@ -193,7 +222,7 @@ function renderRecipeGrid() {
       <div class="recipe-card-top" data-action="view-recipe" role="button" tabindex="0">
         <span class="category-chip">${escapeHtml(recipe.category || "Recipe")}</span><h2>${escapeHtml(recipe.title)}</h2>
       </div>
-      <div class="recipe-card-body"><div class="recipe-meta"><span>${recipe.ingredients.length} ingredients</span><span>${recipe.steps.length} steps</span></div>
+      <div class="recipe-card-body"><div class="recipe-meta"><span>${recipe.ingredients.length} ingredients</span><span>${recipe.steps.length} steps</span>${recipe.youtubeLinks.length ? `<span>${recipe.youtubeLinks.length} ${recipe.youtubeLinks.length === 1 ? "video" : "videos"}</span>` : ""}</div>
         <p class="recipe-preview">${escapeHtml(preview)}</p>
         <div class="recipe-actions"><button class="mini-icon-button" type="button" data-action="edit-recipe" aria-label="Edit ${escapeHtml(recipe.title)}"><svg><use href="#i-edit"></use></svg></button><button class="mini-icon-button" type="button" data-action="delete-recipe" aria-label="Delete ${escapeHtml(recipe.title)}"><svg><use href="#i-trash"></use></svg></button><button class="mini-icon-button" type="button" data-action="view-recipe" aria-label="Open ${escapeHtml(recipe.title)}"><svg><use href="#i-arrow"></use></svg></button></div>
       </div></article>`;
@@ -203,9 +232,9 @@ function renderRecipeGrid() {
   const emptyTitle = dom.recipesEmpty.querySelector("h2");
   const emptyCopy = dom.recipesEmpty.querySelector("p");
   const emptyButton = dom.recipesEmpty.querySelector("button");
-  if (query && allRecipes.length) {
-    emptyTitle.textContent = "No recipe matches that search";
-    emptyCopy.textContent = "Try another recipe name or ingredient.";
+  if (filtering && allRecipes.length) {
+    emptyTitle.textContent = "No recipe matches those filters";
+    emptyCopy.textContent = "Try another search or category.";
     emptyButton.hidden = true;
   } else {
     emptyTitle.textContent = "Your recipe box is waiting";
@@ -296,6 +325,7 @@ function openRecipeForm(recipe = null) {
     dom.recipeCategoryInput.value = recipe.category;
     dom.recipeIngredientsInput.value = recipe.ingredients.join("\n");
     dom.recipeStepsInput.value = recipe.steps.join("\n");
+    dom.recipeYoutubeLinksInput.value = recipe.youtubeLinks.join("\n");
     dom.recipeNotesInput.value = recipe.notes;
   }
   dom.recipeDialog.showModal();
@@ -308,9 +338,48 @@ function openRecipeDetail(recipe) {
   dom.detailTitle.textContent = recipe.title;
   dom.detailIngredients.innerHTML = recipe.ingredients.map(item => `<li>${escapeHtml(item)}</li>`).join("") || "<li>No ingredients added.</li>";
   dom.detailSteps.innerHTML = recipe.steps.map(step => `<li>${escapeHtml(step)}</li>`).join("") || "<li>No method added.</li>";
+  dom.detailReferences.innerHTML = recipe.youtubeLinks.map((link, index) => `<a class="reference-link" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer"><svg aria-hidden="true"><use href="#i-play"></use></svg>YouTube reference ${index + 1}</a>`).join("");
+  dom.detailReferencesSection.hidden = recipe.youtubeLinks.length === 0;
   dom.detailNotes.textContent = recipe.notes;
   dom.detailNotes.hidden = !recipe.notes;
   dom.recipeDetailDialog.showModal();
+}
+
+async function copyPlainText(text) {
+  if (navigator.clipboard?.writeText && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  document.body.append(area);
+  area.select();
+  const copied = document.execCommand("copy");
+  area.remove();
+  if (!copied) throw new Error("Copy is not available on this device.");
+}
+
+async function shareRecipe(recipe) {
+  const text = Core.recipePlainText(recipe);
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: recipe.title, text });
+      return;
+    }
+    await copyPlainText(text);
+    showToast("Recipe copied as plain text.");
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    try {
+      await copyPlainText(text);
+      showToast("Recipe copied as plain text.");
+    } catch {
+      showToast("This device could not share the recipe.");
+    }
+  }
 }
 
 function askConfirm(title, message, actionLabel = "Delete") {
@@ -573,7 +642,7 @@ function requestNameIfNeeded() {
 }
 
 function cloudRecipe(row) {
-  return Core.normalizeRecipe({ id: row.id, title: row.title, category: row.category, notes: row.notes, ingredients: row.ingredients, steps: row.steps, createdAt: row.client_created_at, updatedAt: row.client_updated_at, deletedAt: row.deleted_at });
+  return Core.normalizeRecipe({ id: row.id, title: row.title, category: row.category, notes: row.notes, ingredients: row.ingredients, steps: row.steps, youtubeLinks: row.youtube_links, createdAt: row.client_created_at, updatedAt: row.client_updated_at, deletedAt: row.deleted_at });
 }
 
 function cloudGrocery(row) {
@@ -587,7 +656,7 @@ function cloudPantry(row) {
 async function fetchCloudState() {
   const [profile, recipes, grocery, pantry] = await Promise.all([
     authClient.from("mykitchen_profiles").select("user_id, name, theme, schema_version, client_updated_at, updated_at"),
-    authClient.from("mykitchen_recipes").select("id, title, category, notes, ingredients, steps, client_created_at, client_updated_at, deleted_at, updated_at"),
+    authClient.from("mykitchen_recipes").select("id, title, category, notes, ingredients, steps, youtube_links, client_created_at, client_updated_at, deleted_at, updated_at"),
     authClient.from("mykitchen_grocery_items").select("id, name, normalized_name, source_recipe_ids, bought, bought_at, client_created_at, client_updated_at, deleted_at, updated_at"),
     authClient.from("mykitchen_pantry_items").select("id, name, normalized_name, status, stocked_at, finished_at, client_created_at, client_updated_at, deleted_at, updated_at")
   ]);
@@ -605,7 +674,7 @@ async function upsertCloudState(source) {
   const userId = authSession.user.id;
   const requests = [];
   requests.push(authClient.from("mykitchen_profiles").upsert({ user_id: userId, name: source.profile.name, theme: source.profile.theme, schema_version: 1, client_updated_at: source.profile.updatedAt }, { onConflict: "user_id" }));
-  if (source.recipes.length) requests.push(authClient.from("mykitchen_recipes").upsert(source.recipes.map(item => ({ user_id: userId, id: item.id, title: item.title, category: item.category, notes: item.notes, ingredients: item.ingredients, steps: item.steps, client_created_at: item.createdAt, client_updated_at: item.updatedAt, deleted_at: item.deletedAt })), { onConflict: "user_id,id" }));
+  if (source.recipes.length) requests.push(authClient.from("mykitchen_recipes").upsert(source.recipes.map(item => ({ user_id: userId, id: item.id, title: item.title, category: item.category, notes: item.notes, ingredients: item.ingredients, steps: item.steps, youtube_links: item.youtubeLinks, client_created_at: item.createdAt, client_updated_at: item.updatedAt, deleted_at: item.deletedAt })), { onConflict: "user_id,id" }));
   if (source.grocery.length) requests.push(authClient.from("mykitchen_grocery_items").upsert(source.grocery.map(item => ({ user_id: userId, id: item.id, name: item.name, normalized_name: item.normalizedName, source_recipe_ids: item.sourceRecipeIds, bought: item.bought, bought_at: item.boughtAt, client_created_at: item.createdAt, client_updated_at: item.updatedAt, deleted_at: item.deletedAt })), { onConflict: "user_id,id" }));
   if (source.pantry.length) requests.push(authClient.from("mykitchen_pantry_items").upsert(source.pantry.map(item => ({ user_id: userId, id: item.id, name: item.name, normalized_name: item.normalizedName, status: item.status, stocked_at: item.stockedAt, finished_at: item.finishedAt, client_created_at: item.createdAt, client_updated_at: item.updatedAt, deleted_at: item.deletedAt })), { onConflict: "user_id,id" }));
   const responses = await Promise.all(requests);
@@ -694,6 +763,7 @@ function bindEvents() {
   document.querySelector("#addRecipeButton").addEventListener("click", () => openRecipeForm());
   document.querySelector("#emptyAddRecipeButton").addEventListener("click", () => openRecipeForm());
   dom.recipeSearch.addEventListener("input", renderRecipeGrid);
+  dom.recipeCategoryFilter.addEventListener("change", () => { recipeCategoryFilter = dom.recipeCategoryFilter.value; renderRecipeGrid(); });
   document.querySelector("#clearSelectionButton").addEventListener("click", () => { selectedRecipes.clear(); renderRecipeGrid(); });
   document.querySelector("#addSelectedToGroceryButton").addEventListener("click", () => addSelectedRecipesToGrocery());
 
@@ -728,16 +798,20 @@ function bindEvents() {
     event.preventDefault();
     const title = Core.cleanText(dom.recipeTitleInput.value, 80);
     const ingredients = Core.cleanLines(dom.recipeIngredientsInput.value, 100, 120);
+    const rawYoutubeLinks = Core.cleanLines(dom.recipeYoutubeLinksInput.value, 12, 500);
+    const youtubeLinks = Core.cleanYoutubeLinks(rawYoutubeLinks);
     if (!title) { dom.recipeTitleInput.focus(); return; }
     if (!ingredients.length) { dom.recipeIngredientsInput.focus(); return; }
+    if (rawYoutubeLinks.some(link => Core.cleanYoutubeLinks([link]).length === 0)) { showToast("Please use valid YouTube links only."); dom.recipeYoutubeLinksInput.focus(); return; }
     const now = Core.nowIso();
     const id = dom.recipeIdInput.value;
     const existing = id ? state.recipes.find(item => item.id === id) : null;
-    if (existing) Object.assign(existing, { title, category: Core.cleanText(dom.recipeCategoryInput.value, 36), notes: Core.cleanText(dom.recipeNotesInput.value, 500), ingredients, steps: Core.cleanLines(dom.recipeStepsInput.value, 80, 500), deletedAt: null, updatedAt: now });
-    else state.recipes.unshift(Core.normalizeRecipe({ id: Core.recordId("recipe"), title, category: dom.recipeCategoryInput.value, notes: dom.recipeNotesInput.value, ingredients, steps: dom.recipeStepsInput.value, createdAt: now, updatedAt: now }));
+    if (existing) Object.assign(existing, { title, category: Core.cleanText(dom.recipeCategoryInput.value, 36), notes: Core.cleanText(dom.recipeNotesInput.value, 500), ingredients, steps: Core.cleanLines(dom.recipeStepsInput.value, 80, 500), youtubeLinks, deletedAt: null, updatedAt: now });
+    else state.recipes.unshift(Core.normalizeRecipe({ id: Core.recordId("recipe"), title, category: dom.recipeCategoryInput.value, notes: dom.recipeNotesInput.value, ingredients, steps: dom.recipeStepsInput.value, youtubeLinks, createdAt: now, updatedAt: now }));
     dom.recipeDialog.close();
     commit(state, { message: existing ? "Recipe updated." : "Recipe added." });
   });
+  dom.detailShareButton.addEventListener("click", () => { const recipe = state.recipes.find(item => item.id === detailRecipeId && !item.deletedAt); if (recipe) shareRecipe(recipe); });
   dom.detailEditButton.addEventListener("click", () => { const recipe = state.recipes.find(item => item.id === detailRecipeId && !item.deletedAt); if (!recipe) return; dom.recipeDetailDialog.close(); openRecipeForm(recipe); });
   dom.detailAddToGroceryButton.addEventListener("click", () => addSelectedRecipesToGrocery([detailRecipeId]));
 

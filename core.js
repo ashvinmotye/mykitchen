@@ -21,6 +21,24 @@
     return input.map(item => cleanText(item, maxLength)).filter(Boolean).slice(0, maxItems);
   }
 
+  function cleanYoutubeLinks(value) {
+    const links = [];
+    const seen = new Set();
+    for (let candidate of cleanLines(value, 12, 500)) {
+      if (!/^https?:\/\//i.test(candidate) && /^(?:www\.)?(?:youtube\.com|youtu\.be)\//i.test(candidate)) candidate = `https://${candidate}`;
+      try {
+        const url = new URL(candidate);
+        const hostname = url.hostname.toLocaleLowerCase().replace(/^www\./, "");
+        const isYoutube = hostname === "youtu.be" || hostname === "youtube.com" || hostname.endsWith(".youtube.com") || hostname === "youtube-nocookie.com" || hostname.endsWith(".youtube-nocookie.com");
+        if (!isYoutube || !["http:", "https:"].includes(url.protocol)) continue;
+        url.protocol = "https:";
+        const normalized = url.toString();
+        if (!seen.has(normalized)) { seen.add(normalized); links.push(normalized); }
+      } catch {}
+    }
+    return links;
+  }
+
   function normalizeName(value) {
     let normalized = cleanText(value, 120)
       .normalize("NFKD")
@@ -75,8 +93,25 @@
       category: cleanText(record?.category, 36),
       notes: cleanText(record?.notes, 500),
       ingredients: cleanLines(record?.ingredients, 100, 120),
-      steps: cleanLines(record?.steps, 80, 500)
+      steps: cleanLines(record?.steps, 80, 500),
+      youtubeLinks: cleanYoutubeLinks(record?.youtubeLinks || record?.youtube_links)
     };
+  }
+
+  function recipePlainText(record) {
+    const recipe = normalizeRecipe(record);
+    const lines = [recipe.title];
+    if (recipe.category) lines.push(`Category: ${recipe.category}`);
+    lines.push("", "Ingredients:");
+    lines.push(...(recipe.ingredients.length ? recipe.ingredients.map(item => `- ${item}`) : ["- None added"]));
+    lines.push("", "Method:");
+    lines.push(...(recipe.steps.length ? recipe.steps.map((step, index) => `${index + 1}. ${step}`) : ["No method added."]));
+    if (recipe.notes) lines.push("", "Notes:", recipe.notes);
+    if (recipe.youtubeLinks.length) {
+      lines.push("", "YouTube references:");
+      lines.push(...recipe.youtubeLinks.map((link, index) => `${index + 1}. ${link}`));
+    }
+    return lines.join("\n");
   }
 
   function normalizeGrocery(record) {
@@ -227,11 +262,13 @@
     clone,
     cleanText,
     cleanLines,
+    cleanYoutubeLinks,
     normalizeName,
     recordId,
     blankState,
     hydrateState,
     normalizeRecipe,
+    recipePlainText,
     normalizeGrocery,
     normalizePantry,
     mergeRecordLists,
