@@ -41,6 +41,9 @@ const dom = {
   groceryNavCount: document.querySelector("#groceryNavCount"),
   groceryMobileCount: document.querySelector("#groceryMobileCount"),
   clearGroceryButton: document.querySelector("#clearGroceryButton"),
+  groceryAutocomplete: document.querySelector("#groceryAutocomplete"),
+  groceryNameInput: document.querySelector("#groceryNameInput"),
+  grocerySuggestionList: document.querySelector("#grocerySuggestionList"),
   pantryList: document.querySelector("#pantryList"),
   pantryEmpty: document.querySelector("#pantryEmpty"),
   availablePantryCount: document.querySelector("#availablePantryCount"),
@@ -130,6 +133,9 @@ let pantryOrganiserSelection = new Set();
 let ingredientKeepName = "";
 let ingredientReviewLookup = new Map();
 let pantryOrganiserLookup = new Map();
+let grocerySuggestionsOpen = false;
+let grocerySuggestionIndex = -1;
+let grocerySuggestionItems = [];
 let detailRecipeId = null;
 let confirmResolver = null;
 let toastTimer = null;
@@ -349,6 +355,7 @@ function renderPantryOrganiser() {
 function setView(view, options = {}) {
   const next = ["recipes", "grocery", "pantry", "settings", "ingredient-review", "pantry-organiser"].includes(view) ? view : "recipes";
   currentView = next;
+  if (next !== "grocery") closeGrocerySuggestions();
   document.querySelectorAll(".view").forEach(section => section.classList.toggle("is-active", section.id === `view-${next}`));
   const navView = next === "ingredient-review" ? "settings" : next === "pantry-organiser" ? "pantry" : next;
   document.querySelectorAll(".nav-button[data-view]").forEach(button => button.classList.toggle("is-active", button.dataset.view === navView));
@@ -410,6 +417,60 @@ function recipeSourceLabel(item) {
   return titles.length ? `From ${titles.join(", ")}` : "From a recipe";
 }
 
+function grocerySuggestionSource(item) {
+  if (item.sources.includes("recipe")) return "From recipes";
+  if (item.sources.includes("pantry")) return "From pantry";
+  return "Used before";
+}
+
+function closeGrocerySuggestions() {
+  grocerySuggestionsOpen = false;
+  grocerySuggestionIndex = -1;
+  grocerySuggestionItems = [];
+  dom.grocerySuggestionList.hidden = true;
+  dom.grocerySuggestionList.innerHTML = "";
+  dom.groceryNameInput.setAttribute("aria-expanded", "false");
+  dom.groceryNameInput.removeAttribute("aria-activedescendant");
+}
+
+function renderGrocerySuggestions({ open = grocerySuggestionsOpen } = {}) {
+  if (!open) { closeGrocerySuggestions(); return; }
+  const query = Core.normalizeName(Core.parseIngredientLine(dom.groceryNameInput.value).name);
+  grocerySuggestionItems = Core.knownGroceryItems(state)
+    .filter(item => !item.onList && (!query || item.normalizedName.includes(query)))
+    .sort((a, b) => {
+      const aPrefix = query && a.normalizedName.startsWith(query) ? 0 : 1;
+      const bPrefix = query && b.normalizedName.startsWith(query) ? 0 : 1;
+      return aPrefix - bPrefix || a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    })
+    .slice(0, 8);
+
+  if (!grocerySuggestionItems.length) { closeGrocerySuggestions(); return; }
+  grocerySuggestionsOpen = true;
+  if (grocerySuggestionIndex >= grocerySuggestionItems.length) grocerySuggestionIndex = grocerySuggestionItems.length - 1;
+  dom.grocerySuggestionList.innerHTML = grocerySuggestionItems.map((item, index) => {
+    const selected = index === grocerySuggestionIndex;
+    return `<button id="grocery-suggestion-${index}" class="grocery-suggestion${selected ? " is-active" : ""}" type="button" role="option" aria-selected="${selected}" data-grocery-suggestion-index="${index}">
+      <span class="grocery-suggestion-copy"><strong>${escapeHtml(item.name)}</strong><small>${grocerySuggestionSource(item)}</small></span>
+      ${item.inPantry ? '<span class="pantry-badge">In pantry</span>' : ""}
+    </button>`;
+  }).join("");
+  dom.grocerySuggestionList.hidden = false;
+  dom.groceryNameInput.setAttribute("aria-expanded", "true");
+  if (grocerySuggestionIndex >= 0) dom.groceryNameInput.setAttribute("aria-activedescendant", `grocery-suggestion-${grocerySuggestionIndex}`);
+  else dom.groceryNameInput.removeAttribute("aria-activedescendant");
+}
+
+function chooseGrocerySuggestion(index) {
+  const item = grocerySuggestionItems[index];
+  if (!item) return;
+  dom.groceryNameInput.value = "";
+  closeGrocerySuggestions();
+  addManualGrocery(item.name);
+  dom.groceryNameInput.focus();
+  closeGrocerySuggestions();
+}
+
 function renderGrocery() {
   const items = activeGrocery().sort((a, b) => Number(a.bought) - Number(b.bought) || Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
   const pantryCount = items.filter(item => Core.pantryHas(state, item.name)).length;
@@ -434,6 +495,7 @@ function renderGrocery() {
   }).join("");
   dom.groceryList.hidden = items.length === 0;
   dom.groceryEmpty.hidden = items.length !== 0;
+  if (grocerySuggestionsOpen) renderGrocerySuggestions();
 }
 
 function renderPantry() {
@@ -1065,7 +1127,42 @@ function bindEvents() {
   dom.detailEditButton.addEventListener("click", () => { const recipe = state.recipes.find(item => item.id === detailRecipeId && !item.deletedAt); if (!recipe) return; dom.recipeDetailDialog.close(); openRecipeForm(recipe); });
   dom.detailAddToGroceryButton.addEventListener("click", () => addSelectedRecipesToGrocery([detailRecipeId]));
 
-  document.querySelector("#groceryAddForm").addEventListener("submit", event => { event.preventDefault(); const input = document.querySelector("#groceryNameInput"); addManualGrocery(input.value); input.value = ""; input.focus(); });
+  dom.groceryNameInput.addEventListener("focus", () => { grocerySuggestionIndex = -1; renderGrocerySuggestions({ open: true }); });
+  dom.groceryNameInput.addEventListener("input", () => { grocerySuggestionIndex = -1; renderGrocerySuggestions({ open: true }); });
+  dom.groceryNameInput.addEventListener("keydown", event => {
+    if (event.key === "Escape") { closeGrocerySuggestions(); return; }
+    if (!["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) return;
+    if (event.key === "Enter") {
+      if (grocerySuggestionsOpen && grocerySuggestionIndex >= 0) {
+        event.preventDefault();
+        chooseGrocerySuggestion(grocerySuggestionIndex);
+      }
+      return;
+    }
+    event.preventDefault();
+    if (!grocerySuggestionsOpen) renderGrocerySuggestions({ open: true });
+    if (!grocerySuggestionItems.length) return;
+    const direction = event.key === "ArrowDown" ? 1 : -1;
+    grocerySuggestionIndex = grocerySuggestionIndex < 0
+      ? (direction > 0 ? 0 : grocerySuggestionItems.length - 1)
+      : (grocerySuggestionIndex + direction + grocerySuggestionItems.length) % grocerySuggestionItems.length;
+    renderGrocerySuggestions({ open: true });
+    document.querySelector(`#grocery-suggestion-${grocerySuggestionIndex}`)?.scrollIntoView({ block: "nearest" });
+  });
+  dom.grocerySuggestionList.addEventListener("click", event => {
+    const option = event.target.closest("[data-grocery-suggestion-index]");
+    if (option) chooseGrocerySuggestion(Number(option.dataset.grocerySuggestionIndex));
+  });
+  document.querySelector("#groceryAddForm").addEventListener("submit", event => {
+    event.preventDefault();
+    const name = dom.groceryNameInput.value;
+    if (!Core.cleanText(name, 120)) return;
+    dom.groceryNameInput.value = "";
+    closeGrocerySuggestions();
+    addManualGrocery(name);
+    dom.groceryNameInput.focus();
+    closeGrocerySuggestions();
+  });
   dom.clearGroceryButton.addEventListener("click", async () => {
     const itemCount = activeGrocery().length;
     if (!itemCount) return;
@@ -1139,6 +1236,7 @@ function bindEvents() {
   window.addEventListener("offline", renderAccount);
   window.addEventListener("focus", () => requestSync({ force: true }));
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") requestSync(); });
+  document.addEventListener("pointerdown", event => { if (!dom.groceryAutocomplete.contains(event.target)) closeGrocerySuggestions(); });
 }
 
 async function initialize() {

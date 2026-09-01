@@ -179,6 +179,16 @@ html[data-theme="dark"] .theme-toggle .sun-icon, html[data-theme="dark"] #themeT
 .quick-add label span { display: block; margin-bottom: -1px; }
 .quick-add input { min-height: 48px; }
 .quick-add .button { min-height: 48px; margin-bottom: 0; }
+.grocery-autocomplete { position: relative; min-width: 0; }
+.grocery-autocomplete > label { display: block; margin-bottom: -1px; }
+.grocery-autocomplete > input { width: 100%; }
+.grocery-suggestion-list { position: absolute; z-index: 30; top: calc(100% + 7px); right: 0; left: 0; max-height: min(360px, 52vh); overflow-y: auto; border: 1px solid var(--line); border-radius: 18px 15px 21px 16px; padding: 6px; background: var(--surface-strong); box-shadow: var(--shadow); }
+.grocery-suggestion { width: 100%; min-height: 55px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 0; border-radius: 13px; padding: 9px 10px; background: transparent; color: var(--ink); cursor: pointer; text-align: left; }
+.grocery-suggestion:hover, .grocery-suggestion.is-active { background: color-mix(in srgb, var(--butter) 30%, var(--surface)); }
+.grocery-suggestion.is-active { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--tomato) 42%, transparent); }
+.grocery-suggestion-copy { min-width: 0; display: grid; gap: 2px; }
+.grocery-suggestion-copy strong { overflow: hidden; font-size: .88rem; text-overflow: ellipsis; white-space: nowrap; }
+.grocery-suggestion-copy small { color: var(--muted); font-size: .7rem; font-weight: 750; }
 .list-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
 .list-summary > div { min-height: 94px; display: grid; align-content: center; border: 1px solid var(--line); border-radius: 19px 23px 18px 25px; padding: 15px 18px; background: var(--surface); }
 .list-summary > div:nth-child(2) { background: var(--mint-soft); }

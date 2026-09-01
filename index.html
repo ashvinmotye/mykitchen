@@ -12,7 +12,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
-  <link rel="stylesheet" href="./styles.css?v=5" />
+  <link rel="stylesheet" href="./styles.css?v=6" />
 </head>
 <body>
   <svg class="icon-sprite" aria-hidden="true" focusable="false">
@@ -132,8 +132,12 @@
 
         <section id="view-grocery" class="view" aria-labelledby="groceryTitle">
           <div class="page-head"><div><h1 id="groceryTitle">Grocery list</h1><p>Items stay on the list, even when they are already in your pantry.</p></div><button id="clearGroceryButton" class="button danger" type="button" hidden><svg><use href="#i-trash"></use></svg>Clear all</button></div>
-          <form id="groceryAddForm" class="quick-add">
-            <label><span>Quick add</span><input id="groceryNameInput" maxlength="120" autocomplete="off" placeholder="e.g. Coconut milk" required /></label>
+          <form id="groceryAddForm" class="quick-add grocery-quick-add">
+            <div id="groceryAutocomplete" class="grocery-autocomplete">
+              <label for="groceryNameInput">Quick add</label>
+              <input id="groceryNameInput" maxlength="120" autocomplete="off" placeholder="e.g. Coconut milk" required aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false" aria-controls="grocerySuggestionList" />
+              <div id="grocerySuggestionList" class="grocery-suggestion-list" role="listbox" aria-label="Known grocery items" hidden></div>
+            </div>
             <button class="button primary" type="submit"><svg><use href="#i-plus"></use></svg>Add item</button>
           </form>
           <div class="list-summary">
@@ -292,7 +296,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./core.js?v=5" defer></script>
-  <script src="./app.js?v=5" defer></script>
+  <script src="./core.js?v=6" defer></script>
+  <script src="./app.js?v=6" defer></script>
 </body>
 </html>

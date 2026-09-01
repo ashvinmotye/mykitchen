@@ -210,6 +210,45 @@
     return active(state?.pantry).some(item => item.status === "available" && normalizeName(parseIngredientLine(item.name).name) === key);
   }
 
+  function knownGroceryItems(inputState) {
+    const state = hydrateState(inputState);
+    const items = new Map();
+    const availablePantryNames = new Set(
+      active(state.pantry)
+        .filter(item => item.status === "available")
+        .map(item => normalizeName(parseIngredientLine(item.name).name))
+        .filter(Boolean)
+    );
+    const activeGroceryNames = new Set(
+      active(state.grocery)
+        .map(item => normalizeName(parseIngredientLine(item.name).name))
+        .filter(Boolean)
+    );
+
+    function remember(rawName, source) {
+      const name = parseIngredientLine(rawName).name;
+      const normalizedName = normalizeName(name);
+      if (!name || !normalizedName) return;
+      if (!items.has(normalizedName)) items.set(normalizedName, { name, normalizedName, sources: [] });
+      const item = items.get(normalizedName);
+      if (!item.sources.includes(source)) item.sources.push(source);
+    }
+
+    for (const recipe of active(state.recipes)) {
+      for (const ingredient of recipe.ingredients) remember(ingredient, "recipe");
+    }
+    for (const item of active(state.pantry)) remember(item.name, "pantry");
+    for (const item of state.grocery) remember(item.name, "history");
+
+    return [...items.values()]
+      .map(item => ({
+        ...item,
+        inPantry: availablePantryNames.has(item.normalizedName),
+        onList: activeGroceryNames.has(item.normalizedName)
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.name.localeCompare(b.name));
+  }
+
   function addRecipesToGrocery(inputState, recipeIds, at = nowIso()) {
     const state = hydrateState(inputState);
     const selected = new Set(recipeIds || []);
@@ -326,6 +365,7 @@
     mergeStates,
     active,
     pantryHas,
+    knownGroceryItems,
     addRecipesToGrocery,
     stockPantry,
     mergeRecipeIngredients
