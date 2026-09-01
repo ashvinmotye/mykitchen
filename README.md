@@ -7,13 +7,14 @@ A plain HTML, CSS and JavaScript PWA for recipes, grocery lists and pantry track
 - Recipe creation, editing, viewing, searching and deletion
 - Multiple optional YouTube reference links per recipe
 - Plain-text recipe sharing through the device share sheet, with copy fallback
-- Recipe filtering by category
+- Recipes grouped into collapsible category sections, with categories and recipes sorted A–Z
+- Category filtering that shows only the selected accordion section
 - Multi-recipe selection that adds each ingredient once to the grocery list
 - Manual grocery-list additions with suggestions from recipe ingredients, pantry items and grocery history
 - One-tap clearing for the full grocery list, with confirmation
 - Grocery items remain visible and show an **In pantry** badge when applicable
 - Ticking a grocery item adds or refreshes the matching pantry item
-- Pantry items can be marked finished, restored or removed
+- Pantry items are sorted A–Z and can be marked finished, restored or removed
 - Ingredient review workspace for finding duplicate names and merging them across every recipe
 - Pantry organiser for selecting recipe ingredients already available at home
 - Recipe measurements after a dash and `(optional)` notes are preserved in recipes but hidden from ingredient-management views

@@ -153,7 +153,19 @@ html[data-theme="dark"] .theme-toggle .sun-icon, html[data-theme="dark"] #themeT
 .soft-count { flex: none; color: var(--muted); font-size: .82rem; font-weight: 800; }
 .selection-bar { position: sticky; z-index: 10; top: 98px; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 0 18px; padding: 12px 14px 12px 18px; border: 1px solid color-mix(in srgb, var(--butter) 64%, var(--line)); border-radius: 18px; background: color-mix(in srgb, var(--butter) 25%, var(--surface)); box-shadow: var(--shadow-small); }
 .selection-bar > div { display: flex; gap: 8px; }
-.recipe-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.recipe-accordion-list { display: grid; gap: 16px; }
+.recipe-accordion { overflow: hidden; border: 1px solid var(--line); border-radius: 24px 19px 27px 20px; background: color-mix(in srgb, var(--surface) 82%, var(--butter)); box-shadow: var(--shadow-small); }
+.recipe-accordion:nth-child(even) { border-radius: 19px 27px 20px 25px; }
+.recipe-accordion-summary { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 17px 15px 20px; cursor: pointer; list-style: none; user-select: none; }
+.recipe-accordion-summary::-webkit-details-marker { display: none; }
+.recipe-accordion-summary > span:first-child { min-width: 0; display: grid; gap: 3px; }
+.recipe-accordion-summary strong { overflow: hidden; font-family: "Arial Rounded MT Bold", "Trebuchet MS", sans-serif; font-size: 1.22rem; text-overflow: ellipsis; white-space: nowrap; }
+.recipe-accordion-summary small { color: var(--muted); font-size: .72rem; font-weight: 800; }
+.recipe-accordion-arrow { width: 37px; height: 37px; flex: 0 0 37px; display: grid; place-items: center; border-radius: 12px; background: var(--surface); color: var(--aubergine); transition: transform .18s ease, background .18s ease; }
+.recipe-accordion-arrow svg { width: 18px; height: 18px; }
+.recipe-accordion[open] .recipe-accordion-summary { border-bottom: 1px dashed color-mix(in srgb, var(--line) 80%, transparent); }
+.recipe-accordion[open] .recipe-accordion-arrow { transform: rotate(90deg); background: color-mix(in srgb, var(--butter) 30%, var(--surface)); }
+.recipe-accordion .recipe-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding: 17px; }
 .recipe-card { position: relative; min-height: 226px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 24px 20px 27px 19px; background: var(--surface); box-shadow: var(--shadow-small); transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
 .recipe-card:nth-child(3n+2) { border-radius: 19px 27px 20px 25px; }
 .recipe-card:hover { transform: translateY(-3px) rotate(.25deg); box-shadow: var(--shadow); }

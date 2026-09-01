@@ -128,6 +128,7 @@ let recipeCategoryFilter = "all";
 let ingredientReviewFilter = "all";
 let pantryOrganiserFilter = "all";
 let selectedRecipes = new Set();
+let collapsedRecipeCategories = new Set();
 let ingredientReviewSelection = new Set();
 let pantryOrganiserSelection = new Set();
 let ingredientKeepName = "";
@@ -367,6 +368,20 @@ function setView(view, options = {}) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function recipeCardMarkup(recipe) {
+  const selected = selectedRecipes.has(recipe.id);
+  const preview = recipe.ingredients.slice(0, 4).join(" · ") || "No ingredients yet";
+  return `<article class="recipe-card${selected ? " is-selected" : ""}" data-recipe-id="${escapeHtml(recipe.id)}">
+    <button class="recipe-select" type="button" data-action="toggle-recipe" aria-label="${selected ? "Deselect" : "Select"} ${escapeHtml(recipe.title)}" aria-pressed="${selected}"><svg><use href="#i-check"></use></svg></button>
+    <div class="recipe-card-top" data-action="view-recipe" role="button" tabindex="0">
+      <span class="category-chip">${escapeHtml(recipe.category || "Recipe")}</span><h2>${escapeHtml(recipe.title)}</h2>
+    </div>
+    <div class="recipe-card-body"><div class="recipe-meta"><span>${recipe.ingredients.length} ingredients</span><span>${recipe.steps.length} steps</span>${recipe.youtubeLinks.length ? `<span>${recipe.youtubeLinks.length} ${recipe.youtubeLinks.length === 1 ? "video" : "videos"}</span>` : ""}</div>
+      <p class="recipe-preview">${escapeHtml(preview)}</p>
+      <div class="recipe-actions"><button class="mini-icon-button" type="button" data-action="edit-recipe" aria-label="Edit ${escapeHtml(recipe.title)}"><svg><use href="#i-edit"></use></svg></button><button class="mini-icon-button" type="button" data-action="delete-recipe" aria-label="Delete ${escapeHtml(recipe.title)}"><svg><use href="#i-trash"></use></svg></button><button class="mini-icon-button" type="button" data-action="view-recipe" aria-label="Open ${escapeHtml(recipe.title)}"><svg><use href="#i-arrow"></use></svg></button></div>
+    </div></article>`;
+}
+
 function renderRecipeGrid() {
   const allRecipes = activeRecipes();
   renderCategoryOptions(allRecipes);
@@ -376,24 +391,23 @@ function renderRecipeGrid() {
     const matchesSearch = !query || [recipe.title, recipe.category, recipe.notes, ...recipe.ingredients, ...recipe.youtubeLinks].join(" ").toLocaleLowerCase().includes(query);
     return matchesCategory && matchesSearch;
   });
+  const groups = Core.recipeCategoryGroups(recipes);
   const validIds = new Set(allRecipes.map(recipe => recipe.id));
+  const validCategoryKeys = new Set(Core.recipeCategoryGroups(allRecipes).map(group => group.key));
   selectedRecipes = new Set([...selectedRecipes].filter(id => validIds.has(id)));
+  collapsedRecipeCategories = new Set([...collapsedRecipeCategories].filter(key => validCategoryKeys.has(key)));
   const filtering = Boolean(query) || recipeCategoryFilter !== "all";
+  const forceOpen = filtering;
   dom.recipeCountLabel.textContent = filtering ? `${recipes.length} of ${allRecipes.length} recipes` : `${allRecipes.length} ${allRecipes.length === 1 ? "recipe" : "recipes"}`;
   dom.selectionBar.hidden = selectedRecipes.size === 0;
   dom.selectedRecipeCount.textContent = String(selectedRecipes.size);
-  dom.recipeGrid.innerHTML = recipes.map(recipe => {
-    const selected = selectedRecipes.has(recipe.id);
-    const preview = recipe.ingredients.slice(0, 4).join(" · ") || "No ingredients yet";
-    return `<article class="recipe-card${selected ? " is-selected" : ""}" data-recipe-id="${escapeHtml(recipe.id)}">
-      <button class="recipe-select" type="button" data-action="toggle-recipe" aria-label="${selected ? "Deselect" : "Select"} ${escapeHtml(recipe.title)}" aria-pressed="${selected}"><svg><use href="#i-check"></use></svg></button>
-      <div class="recipe-card-top" data-action="view-recipe" role="button" tabindex="0">
-        <span class="category-chip">${escapeHtml(recipe.category || "Recipe")}</span><h2>${escapeHtml(recipe.title)}</h2>
-      </div>
-      <div class="recipe-card-body"><div class="recipe-meta"><span>${recipe.ingredients.length} ingredients</span><span>${recipe.steps.length} steps</span>${recipe.youtubeLinks.length ? `<span>${recipe.youtubeLinks.length} ${recipe.youtubeLinks.length === 1 ? "video" : "videos"}</span>` : ""}</div>
-        <p class="recipe-preview">${escapeHtml(preview)}</p>
-        <div class="recipe-actions"><button class="mini-icon-button" type="button" data-action="edit-recipe" aria-label="Edit ${escapeHtml(recipe.title)}"><svg><use href="#i-edit"></use></svg></button><button class="mini-icon-button" type="button" data-action="delete-recipe" aria-label="Delete ${escapeHtml(recipe.title)}"><svg><use href="#i-trash"></use></svg></button><button class="mini-icon-button" type="button" data-action="view-recipe" aria-label="Open ${escapeHtml(recipe.title)}"><svg><use href="#i-arrow"></use></svg></button></div>
-      </div></article>`;
+  dom.recipeGrid.innerHTML = groups.map(group => {
+    const open = forceOpen || !collapsedRecipeCategories.has(group.key);
+    const countLabel = `${group.recipes.length} ${group.recipes.length === 1 ? "recipe" : "recipes"}`;
+    return `<details class="recipe-accordion" data-recipe-category="${escapeHtml(group.key)}"${open ? " open" : ""}>
+      <summary class="recipe-accordion-summary"><span><strong>${escapeHtml(group.label)}</strong><small>${countLabel}</small></span><span class="recipe-accordion-arrow"><svg><use href="#i-arrow"></use></svg></span></summary>
+      <div class="recipe-grid">${group.recipes.map(recipeCardMarkup).join("")}</div>
+    </details>`;
   }).join("");
   dom.recipeGrid.hidden = recipes.length === 0;
   dom.recipesEmpty.hidden = recipes.length !== 0;
@@ -499,7 +513,7 @@ function renderGrocery() {
 }
 
 function renderPantry() {
-  const allItems = activePantry().sort((a, b) => (a.status === b.status ? Date.parse(b.updatedAt) - Date.parse(a.updatedAt) : a.status === "available" ? -1 : 1));
+  const allItems = activePantry().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.name.localeCompare(b.name));
   const available = allItems.filter(item => item.status === "available").length;
   const finished = allItems.length - available;
   dom.availablePantryCount.textContent = String(available);
@@ -833,6 +847,7 @@ async function showAuthenticatedApp(session, options = {}) {
     activeUserId = user.id;
     state = loadUserState(user.id);
     selectedRecipes.clear();
+    collapsedRecipeCategories.clear();
     ingredientReviewSelection.clear();
     pantryOrganiserSelection.clear();
     ingredientKeepName = "";
@@ -995,7 +1010,17 @@ function bindEvents() {
   document.querySelector("#addRecipeButton").addEventListener("click", () => openRecipeForm());
   document.querySelector("#emptyAddRecipeButton").addEventListener("click", () => openRecipeForm());
   dom.recipeSearch.addEventListener("input", renderRecipeGrid);
-  dom.recipeCategoryFilter.addEventListener("change", () => { recipeCategoryFilter = dom.recipeCategoryFilter.value; renderRecipeGrid(); });
+  dom.recipeCategoryFilter.addEventListener("change", () => {
+    recipeCategoryFilter = dom.recipeCategoryFilter.value;
+    if (recipeCategoryFilter !== "all") collapsedRecipeCategories.delete(recipeCategoryFilter);
+    renderRecipeGrid();
+  });
+  dom.recipeGrid.addEventListener("toggle", event => {
+    const accordion = event.target.closest?.("[data-recipe-category]");
+    if (!accordion || event.target !== accordion) return;
+    if (accordion.open) collapsedRecipeCategories.delete(accordion.dataset.recipeCategory);
+    else collapsedRecipeCategories.add(accordion.dataset.recipeCategory);
+  }, true);
   document.querySelector("#clearSelectionButton").addEventListener("click", () => { selectedRecipes.clear(); renderRecipeGrid(); });
   document.querySelector("#addSelectedToGroceryButton").addEventListener("click", () => addSelectedRecipesToGrocery());
   dom.openIngredientReviewButton.addEventListener("click", () => setView("ingredient-review"));

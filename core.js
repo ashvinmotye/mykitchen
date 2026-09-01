@@ -205,6 +205,22 @@
     return (records || []).filter(record => !record.deletedAt);
   }
 
+  function recipeCategoryGroups(records) {
+    const groups = new Map();
+    for (const record of active((records || []).map(normalizeRecipe)).filter(recipe => recipe.title)) {
+      const category = cleanText(record.category, 36);
+      const key = category ? category.toLocaleLowerCase() : "__uncategorized__";
+      if (!groups.has(key)) groups.set(key, { key, label: category || "Uncategorised", recipes: [] });
+      groups.get(key).recipes.push(record);
+    }
+    return [...groups.values()]
+      .map(group => ({
+        ...group,
+        recipes: group.recipes.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }) || a.title.localeCompare(b.title))
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }) || a.label.localeCompare(b.label));
+  }
+
   function pantryHas(state, name) {
     const key = normalizeName(parseIngredientLine(name).name);
     return active(state?.pantry).some(item => item.status === "available" && normalizeName(parseIngredientLine(item.name).name) === key);
@@ -364,6 +380,7 @@
     mergeRecordLists,
     mergeStates,
     active,
+    recipeCategoryGroups,
     pantryHas,
     knownGroceryItems,
     addRecipesToGrocery,
