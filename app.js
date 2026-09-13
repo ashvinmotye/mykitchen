@@ -43,7 +43,11 @@ const dom = {
   clearGroceryButton: document.querySelector("#clearGroceryButton"),
   groceryAutocomplete: document.querySelector("#groceryAutocomplete"),
   groceryNameInput: document.querySelector("#groceryNameInput"),
+  groceryCategoryInput: document.querySelector("#groceryCategoryInput"),
+  groceryAisleInput: document.querySelector("#groceryAisleInput"),
   grocerySuggestionList: document.querySelector("#grocerySuggestionList"),
+  shoppingShopPicker: document.querySelector("#shoppingShopPicker"),
+  shoppingShopSelect: document.querySelector("#shoppingShopSelect"),
   pantryList: document.querySelector("#pantryList"),
   pantryEmpty: document.querySelector("#pantryEmpty"),
   availablePantryCount: document.querySelector("#availablePantryCount"),
@@ -60,6 +64,13 @@ const dom = {
   addPantryOrganiserSelectionButton: document.querySelector("#addPantryOrganiserSelectionButton"),
   clearPantryOrganiserSelectionButton: document.querySelector("#clearPantryOrganiserSelectionButton"),
   backToPantryButton: document.querySelector("#backToPantryButton"),
+  houseList: document.querySelector("#houseList"),
+  houseEmpty: document.querySelector("#houseEmpty"),
+  houseNameInput: document.querySelector("#houseNameInput"),
+  houseAisleInput: document.querySelector("#houseAisleInput"),
+  availableHouseCount: document.querySelector("#availableHouseCount"),
+  finishedHouseCount: document.querySelector("#finishedHouseCount"),
+  pantryAisleInput: document.querySelector("#pantryAisleInput"),
   profileNameInput: document.querySelector("#profileNameInput"),
   accountEmail: document.querySelector("#accountEmail"),
   cloudSyncStatus: document.querySelector("#cloudSyncStatus"),
@@ -80,6 +91,19 @@ const dom = {
   mergeIngredientsButton: document.querySelector("#mergeIngredientsButton"),
   clearIngredientSelectionButton: document.querySelector("#clearIngredientSelectionButton"),
   backToSettingsButton: document.querySelector("#backToSettingsButton"),
+  aisleAddForm: document.querySelector("#aisleAddForm"),
+  aisleNameInput: document.querySelector("#aisleNameInput"),
+  aisleSettingsList: document.querySelector("#aisleSettingsList"),
+  aisleSettingsEmpty: document.querySelector("#aisleSettingsEmpty"),
+  shopAddForm: document.querySelector("#shopAddForm"),
+  shopNameInput: document.querySelector("#shopNameInput"),
+  shopSettingsList: document.querySelector("#shopSettingsList"),
+  shopSettingsEmpty: document.querySelector("#shopSettingsEmpty"),
+  shopSortTitle: document.querySelector("#shopSortTitle"),
+  shopSortList: document.querySelector("#shopSortList"),
+  shopSortEmpty: document.querySelector("#shopSortEmpty"),
+  backFromShopSortButton: document.querySelector("#backFromShopSortButton"),
+  confirmShopSortButton: document.querySelector("#confirmShopSortButton"),
   nameDialog: document.querySelector("#nameDialog"),
   firstNameInput: document.querySelector("#firstNameInput"),
   recipeDialog: document.querySelector("#recipeDialog"),
@@ -104,6 +128,20 @@ const dom = {
   detailShareButton: document.querySelector("#detailShareButton"),
   detailEditButton: document.querySelector("#detailEditButton"),
   detailAddToGroceryButton: document.querySelector("#detailAddToGroceryButton"),
+  shoppingItemDialog: document.querySelector("#shoppingItemDialog"),
+  shoppingItemForm: document.querySelector("#shoppingItemForm"),
+  shoppingItemIdInput: document.querySelector("#shoppingItemIdInput"),
+  shoppingItemNameInput: document.querySelector("#shoppingItemNameInput"),
+  shoppingItemCategoryInput: document.querySelector("#shoppingItemCategoryInput"),
+  shoppingItemAisleInput: document.querySelector("#shoppingItemAisleInput"),
+  managerNameDialog: document.querySelector("#managerNameDialog"),
+  managerNameForm: document.querySelector("#managerNameForm"),
+  managerNameEyebrow: document.querySelector("#managerNameEyebrow"),
+  managerNameTitle: document.querySelector("#managerNameTitle"),
+  managerNameTypeInput: document.querySelector("#managerNameTypeInput"),
+  managerNameIdInput: document.querySelector("#managerNameIdInput"),
+  managerNameLabel: document.querySelector("#managerNameLabel"),
+  managerNameInput: document.querySelector("#managerNameInput"),
   confirmDialog: document.querySelector("#confirmDialog"),
   confirmTitle: document.querySelector("#confirmTitle"),
   confirmMessage: document.querySelector("#confirmMessage"),
@@ -124,6 +162,7 @@ let syncRequested = false;
 let syncTimer = null;
 let currentView = "recipes";
 let pantryFilter = "available";
+let houseFilter = "available";
 let recipeCategoryFilter = "all";
 let ingredientReviewFilter = "all";
 let pantryOrganiserFilter = "all";
@@ -140,6 +179,13 @@ let grocerySuggestionItems = [];
 let detailRecipeId = null;
 let confirmResolver = null;
 let toastTimer = null;
+let shopSortShopId = null;
+let shopSortDraft = [];
+let shopSortDirty = false;
+let draggedAisleId = null;
+let dropAisleId = null;
+let dropPosition = "before";
+let touchSortPointerId = null;
 
 function safeParse(value) {
   try { return JSON.parse(value); } catch { return null; }
@@ -210,6 +256,31 @@ function commit(nextState, options = {}) {
 function activeRecipes() { return Core.active(state.recipes); }
 function activeGrocery() { return Core.active(state.grocery); }
 function activePantry() { return Core.active(state.pantry); }
+function activeHouse() { return Core.active(state.house); }
+function activeAisles() { return Core.active(state.aisles).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.name.localeCompare(b.name)); }
+function activeShops() { return Core.active(state.shops).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.name.localeCompare(b.name)); }
+
+function aisleName(aisleId) {
+  if (!aisleId || aisleId === Core.DEFAULT_AISLE_ID) return "Unassigned";
+  return activeAisles().find(aisle => aisle.id === aisleId)?.name || "Unassigned";
+}
+
+function fillAisleSelect(select, preferredValue = select?.value) {
+  if (!select) return;
+  const aisles = activeAisles();
+  const valid = aisles.some(aisle => aisle.id === preferredValue) ? preferredValue : Core.DEFAULT_AISLE_ID;
+  select.innerHTML = `<option value="${Core.DEFAULT_AISLE_ID}">${aisles.length ? "Unassigned" : "Unassigned — add aisles in Settings"}</option>${aisles.map(aisle => `<option value="${escapeHtml(aisle.id)}">${escapeHtml(aisle.name)}</option>`).join("")}`;
+  select.value = valid;
+}
+
+function selectedShop() {
+  const shops = activeShops();
+  return shops.find(shop => shop.id === state.profile.selectedShopId) || shops[0] || null;
+}
+
+function itemAtDestination(item) {
+  return item.category === "house" ? Core.houseHas(state, item.name) : Core.pantryHas(state, item.name);
+}
 
 function categoryKey(value) {
   const category = Core.cleanText(value, 36);
@@ -354,16 +425,17 @@ function renderPantryOrganiser() {
 }
 
 function setView(view, options = {}) {
-  const next = ["recipes", "grocery", "pantry", "settings", "ingredient-review", "pantry-organiser"].includes(view) ? view : "recipes";
+  const next = ["recipes", "grocery", "pantry", "house", "settings", "ingredient-review", "pantry-organiser", "shop-sort"].includes(view) ? view : "recipes";
   currentView = next;
   if (next !== "grocery") closeGrocerySuggestions();
   document.querySelectorAll(".view").forEach(section => section.classList.toggle("is-active", section.id === `view-${next}`));
-  const navView = next === "ingredient-review" ? "settings" : next === "pantry-organiser" ? "pantry" : next;
+  const navView = ["ingredient-review", "shop-sort"].includes(next) ? "settings" : next === "pantry-organiser" ? "pantry" : next;
   document.querySelectorAll(".nav-button[data-view]").forEach(button => button.classList.toggle("is-active", button.dataset.view === navView));
-  const eyebrow = { recipes: "RECIPE BOX", grocery: "SHOPPING RUN", pantry: "WHAT'S AT HOME", settings: "MY KITCHEN", "ingredient-review": "TIDY THE SHELF", "pantry-organiser": "STOCK THE PANTRY" }[next];
+  const eyebrow = { recipes: "RECIPE BOX", grocery: "SHOPPING RUN", pantry: "FOOD AT HOME", house: "HOUSE SUPPLIES", settings: "MY KITCHEN", "ingredient-review": "TIDY THE SHELF", "pantry-organiser": "STOCK THE PANTRY", "shop-sort": "PLAN THE SHOP" }[next];
   dom.viewEyebrow.textContent = eyebrow;
   if (next === "ingredient-review") renderIngredientReview();
   if (next === "pantry-organiser") renderPantryOrganiser();
+  if (next === "shop-sort") renderShopSort();
   if (!options.silentHash) history.replaceState(null, "", `${location.pathname}${location.search}#${next}`);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -434,6 +506,7 @@ function recipeSourceLabel(item) {
 function grocerySuggestionSource(item) {
   if (item.sources.includes("recipe")) return "From recipes";
   if (item.sources.includes("pantry")) return "From pantry";
+  if (item.sources.includes("house")) return "From House";
   return "Used before";
 }
 
@@ -465,8 +538,8 @@ function renderGrocerySuggestions({ open = grocerySuggestionsOpen } = {}) {
   dom.grocerySuggestionList.innerHTML = grocerySuggestionItems.map((item, index) => {
     const selected = index === grocerySuggestionIndex;
     return `<button id="grocery-suggestion-${index}" class="grocery-suggestion${selected ? " is-active" : ""}" type="button" role="option" aria-selected="${selected}" data-grocery-suggestion-index="${index}">
-      <span class="grocery-suggestion-copy"><strong>${escapeHtml(item.name)}</strong><small>${grocerySuggestionSource(item)}</small></span>
-      ${item.inPantry ? '<span class="pantry-badge">In pantry</span>' : ""}
+      <span class="grocery-suggestion-copy"><strong>${escapeHtml(item.name)}</strong><small>${grocerySuggestionSource(item)} · ${item.category === "house" ? "House" : "Pantry"} · ${escapeHtml(aisleName(item.aisleId))}</small></span>
+      ${item.inPantry || item.inHouse ? `<span class="pantry-badge">In ${item.inHouse ? "house" : "pantry"}</span>` : ""}
     </button>`;
   }).join("");
   dom.grocerySuggestionList.hidden = false;
@@ -478,16 +551,36 @@ function renderGrocerySuggestions({ open = grocerySuggestionsOpen } = {}) {
 function chooseGrocerySuggestion(index) {
   const item = grocerySuggestionItems[index];
   if (!item) return;
-  dom.groceryNameInput.value = "";
+  dom.groceryNameInput.value = item.name;
+  dom.groceryCategoryInput.value = item.category;
+  fillAisleSelect(dom.groceryAisleInput, item.aisleId);
   closeGrocerySuggestions();
-  addManualGrocery(item.name);
-  dom.groceryNameInput.focus();
-  closeGrocerySuggestions();
+  dom.groceryCategoryInput.focus();
+}
+
+function shoppingItemMarkup(item) {
+  const atHome = itemAtDestination(item);
+  const destination = item.category === "house" ? "House" : "Pantry";
+  return `<article class="grocery-item${item.bought ? " is-bought" : ""}" data-grocery-id="${escapeHtml(item.id)}">
+    <button class="shopping-check" type="button" data-action="toggle-grocery" aria-label="${item.bought ? "Mark not bought" : "Mark bought"}: ${escapeHtml(item.name)}" aria-pressed="${item.bought}"><svg><use href="#i-check"></use></svg></button>
+    <div class="grocery-copy"><strong class="grocery-name">${escapeHtml(item.name)}</strong><small class="grocery-source">${escapeHtml(recipeSourceLabel(item))}</small><span class="grocery-meta"><span class="item-category${item.category === "house" ? " is-house" : ""}">${destination}</span><span class="item-aisle">${escapeHtml(aisleName(item.aisleId))}</span></span></div>
+    ${atHome ? `<span class="pantry-badge">In ${destination.toLocaleLowerCase()}</span>` : ""}
+    <div class="grocery-actions"><button class="mini-icon-button" type="button" data-action="edit-grocery" aria-label="Edit ${escapeHtml(item.name)}"><svg><use href="#i-edit"></use></svg></button><button class="mini-icon-button" type="button" data-action="delete-grocery" aria-label="Remove ${escapeHtml(item.name)}"><svg><use href="#i-trash"></use></svg></button></div>
+  </article>`;
+}
+
+function renderShoppingShopPicker() {
+  const shops = activeShops();
+  const shop = selectedShop();
+  dom.shoppingShopPicker.hidden = shops.length === 0;
+  dom.shoppingShopSelect.innerHTML = shops.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
+  if (shop) dom.shoppingShopSelect.value = shop.id;
+  return shop;
 }
 
 function renderGrocery() {
-  const items = activeGrocery().sort((a, b) => Number(a.bought) - Number(b.bought) || Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
-  const pantryCount = items.filter(item => Core.pantryHas(state, item.name)).length;
+  const items = activeGrocery().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.name.localeCompare(b.name));
+  const pantryCount = items.filter(itemAtDestination).length;
   const boughtCount = items.filter(item => item.bought).length;
   const openCount = items.length - boughtCount;
   dom.groceryOpenCount.textContent = String(openCount);
@@ -498,36 +591,142 @@ function renderGrocery() {
     badge.textContent = String(openCount);
     badge.hidden = openCount === 0;
   }
-  dom.groceryList.innerHTML = items.map(item => {
-    const inPantry = Core.pantryHas(state, item.name);
-    return `<article class="grocery-item${item.bought ? " is-bought" : ""}" data-grocery-id="${escapeHtml(item.id)}">
-      <button class="shopping-check" type="button" data-action="toggle-grocery" aria-label="${item.bought ? "Mark not bought" : "Mark bought"}: ${escapeHtml(item.name)}" aria-pressed="${item.bought}"><svg><use href="#i-check"></use></svg></button>
-      <div class="grocery-copy"><strong class="grocery-name">${escapeHtml(item.name)}</strong><small class="grocery-source">${escapeHtml(recipeSourceLabel(item))}</small></div>
-      ${inPantry ? '<span class="pantry-badge">In pantry</span>' : ""}
-      <button class="mini-icon-button" type="button" data-action="delete-grocery" aria-label="Remove ${escapeHtml(item.name)}"><svg><use href="#i-trash"></use></svg></button>
-    </article>`;
-  }).join("");
+  const shop = renderShoppingShopPicker();
+  if (shop) {
+    const aisleOrder = [...Core.shopAisleOrder(state, shop), Core.DEFAULT_AISLE_ID];
+    const groups = new Map(aisleOrder.map(id => [id, []]));
+    for (const item of items) {
+      const aisleId = activeAisles().some(aisle => aisle.id === item.aisleId) ? item.aisleId : Core.DEFAULT_AISLE_ID;
+      if (!groups.has(aisleId)) groups.set(aisleId, []);
+      groups.get(aisleId).push(item);
+    }
+    dom.groceryList.innerHTML = [...groups.entries()].filter(([, groupItems]) => groupItems.length).map(([aisleId, groupItems]) => `<section class="aisle-section"><div class="aisle-section-head"><h2>${escapeHtml(aisleName(aisleId))}</h2><span>${groupItems.length}</span></div><div class="aisle-section-items">${groupItems.map(shoppingItemMarkup).join("")}</div></section>`).join("");
+  } else {
+    dom.groceryList.innerHTML = items.map(shoppingItemMarkup).join("");
+  }
   dom.groceryList.hidden = items.length === 0;
   dom.groceryEmpty.hidden = items.length !== 0;
   if (grocerySuggestionsOpen) renderGrocerySuggestions();
 }
 
-function renderPantry() {
-  const allItems = activePantry().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.name.localeCompare(b.name));
+function stockItemMarkup(item, type) {
+  const label = type === "house" ? "House" : "pantry";
+  return `<article class="pantry-card${item.status === "finished" ? " is-finished" : ""}" data-${type}-id="${escapeHtml(item.id)}">
+    <div class="pantry-card-head"><div><h3>${escapeHtml(item.name)}</h3><span class="stock-meta"><span class="pantry-status">${item.status === "available" ? "Available" : "Finished"}</span><span class="item-aisle">${escapeHtml(aisleName(item.aisleId))}</span></span></div><button class="mini-icon-button" type="button" data-action="delete-${type}" aria-label="Remove ${escapeHtml(item.name)}"><svg><use href="#i-trash"></use></svg></button></div>
+    <button class="button ${item.status === "available" ? "ghost" : "secondary"}" type="button" data-action="toggle-${type}">${item.status === "available" ? "Mark finished" : "Put back"}</button>
+  </article>`;
+}
+
+function renderStockList(type) {
+  const isHouse = type === "house";
+  const label = isHouse ? "House" : "pantry";
+  const allItems = (isHouse ? activeHouse() : activePantry()).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.name.localeCompare(b.name));
   const available = allItems.filter(item => item.status === "available").length;
   const finished = allItems.length - available;
-  dom.availablePantryCount.textContent = String(available);
-  dom.finishedPantryCount.textContent = String(finished);
-  document.querySelectorAll("[data-pantry-filter]").forEach(button => button.classList.toggle("is-active", button.dataset.pantryFilter === pantryFilter));
-  const visible = allItems.filter(item => pantryFilter === "all" || item.status === pantryFilter);
-  dom.pantryList.innerHTML = visible.map(item => `<article class="pantry-card${item.status === "finished" ? " is-finished" : ""}" data-pantry-id="${escapeHtml(item.id)}">
-    <div class="pantry-card-head"><div><h3>${escapeHtml(item.name)}</h3><span class="pantry-status">${item.status === "available" ? "Available" : "Finished"}</span></div><button class="mini-icon-button" type="button" data-action="delete-pantry" aria-label="Remove ${escapeHtml(item.name)}"><svg><use href="#i-trash"></use></svg></button></div>
-    <button class="button ${item.status === "available" ? "ghost" : "secondary"}" type="button" data-action="toggle-pantry">${item.status === "available" ? "Mark finished" : "Put back"}</button>
-  </article>`).join("");
-  dom.pantryList.hidden = visible.length === 0;
-  dom.pantryEmpty.hidden = visible.length !== 0;
-  dom.pantryEmpty.querySelector("h2").textContent = allItems.length ? `No ${pantryFilter} items` : "Nothing here yet";
-  dom.pantryEmpty.querySelector("p").textContent = allItems.length ? "Choose another pantry filter." : "Add pantry items manually or tick them off while shopping.";
+  const filter = isHouse ? houseFilter : pantryFilter;
+  const list = isHouse ? dom.houseList : dom.pantryList;
+  const empty = isHouse ? dom.houseEmpty : dom.pantryEmpty;
+  (isHouse ? dom.availableHouseCount : dom.availablePantryCount).textContent = String(available);
+  (isHouse ? dom.finishedHouseCount : dom.finishedPantryCount).textContent = String(finished);
+  document.querySelectorAll(`[data-${type}-filter]`).forEach(button => button.classList.toggle("is-active", button.dataset[`${type}Filter`] === filter));
+  const visible = allItems.filter(item => filter === "all" || item.status === filter);
+  list.innerHTML = visible.map(item => stockItemMarkup(item, type)).join("");
+  list.hidden = visible.length === 0;
+  empty.hidden = visible.length !== 0;
+  empty.querySelector("h2").textContent = allItems.length ? `No ${filter} items` : "Nothing here yet";
+  empty.querySelector("p").textContent = allItems.length ? `Choose another ${label} filter.` : `Add ${label} items manually or tick them off while shopping.`;
+}
+
+function renderPantry() { renderStockList("pantry"); }
+function renderHouse() { renderStockList("house"); }
+
+function renderSettingsManagers() {
+  const aisles = activeAisles();
+  const shops = activeShops();
+  dom.aisleSettingsEmpty.hidden = aisles.length !== 0;
+  dom.aisleSettingsList.hidden = aisles.length === 0;
+  dom.aisleSettingsList.innerHTML = aisles.map(aisle => `<div class="settings-manager-row" data-aisle-id="${escapeHtml(aisle.id)}"><span class="settings-manager-copy"><strong>${escapeHtml(aisle.name)}</strong><small>Available to every shop</small></span><span class="settings-manager-actions"><button class="button ghost" type="button" data-action="edit-aisle">Edit</button><button class="mini-icon-button" type="button" data-action="delete-aisle" aria-label="Delete ${escapeHtml(aisle.name)}"><svg><use href="#i-trash"></use></svg></button></span></div>`).join("");
+  dom.shopSettingsEmpty.hidden = shops.length !== 0;
+  dom.shopSettingsList.hidden = shops.length === 0;
+  dom.shopSettingsList.innerHTML = shops.map(shop => `<div class="settings-manager-row" data-shop-id="${escapeHtml(shop.id)}"><span class="settings-manager-copy"><strong>${escapeHtml(shop.name)}</strong><small>${Core.shopAisleOrder(state, shop).length} ${Core.shopAisleOrder(state, shop).length === 1 ? "aisle" : "aisles"} ordered</small></span><span class="settings-manager-actions"><button class="button secondary" type="button" data-action="sort-shop"><svg><use href="#i-list"></use></svg>Organise aisles</button><button class="button ghost" type="button" data-action="edit-shop">Edit</button><button class="mini-icon-button" type="button" data-action="delete-shop" aria-label="Delete ${escapeHtml(shop.name)}"><svg><use href="#i-trash"></use></svg></button></span></div>`).join("");
+}
+
+function openManagerNameDialog(type, id) {
+  const record = type === "shop" ? state.shops.find(item => item.id === id && !item.deletedAt) : state.aisles.find(item => item.id === id && !item.deletedAt);
+  if (!record) return;
+  const label = type === "shop" ? "Shop" : "Aisle";
+  dom.managerNameTypeInput.value = type;
+  dom.managerNameIdInput.value = id;
+  dom.managerNameEyebrow.textContent = `EDIT ${label.toLocaleUpperCase()}`;
+  dom.managerNameTitle.textContent = `Rename ${label.toLocaleLowerCase()}`;
+  dom.managerNameLabel.firstChild.textContent = `${label} name`;
+  dom.managerNameInput.value = record.name;
+  dom.managerNameDialog.showModal();
+  window.setTimeout(() => { dom.managerNameInput.focus(); dom.managerNameInput.select(); }, 50);
+}
+
+function openShopSort(shopId) {
+  const shop = state.shops.find(item => item.id === shopId && !item.deletedAt);
+  if (!shop) return;
+  shopSortShopId = shop.id;
+  shopSortDraft = Core.shopAisleOrder(state, shop);
+  shopSortDirty = false;
+  setView("shop-sort");
+}
+
+function renderShopSort() {
+  const shop = state.shops.find(item => item.id === shopSortShopId && !item.deletedAt);
+  if (!shop) {
+    dom.shopSortTitle.textContent = "Organise aisles";
+    dom.shopSortList.innerHTML = "";
+    dom.shopSortEmpty.hidden = false;
+    dom.confirmShopSortButton.disabled = true;
+    return;
+  }
+  const availableIds = new Set(activeAisles().map(aisle => aisle.id));
+  shopSortDraft = [...shopSortDraft.filter(id => availableIds.has(id)), ...activeAisles().map(aisle => aisle.id).filter(id => !shopSortDraft.includes(id))];
+  dom.shopSortTitle.textContent = shop.name;
+  dom.shopSortEmpty.hidden = shopSortDraft.length !== 0;
+  dom.shopSortList.hidden = shopSortDraft.length === 0;
+  dom.shopSortList.innerHTML = shopSortDraft.map((id, index) => {
+    const aisle = state.aisles.find(item => item.id === id && !item.deletedAt);
+    return `<div class="shop-sort-row" draggable="true" data-sort-aisle-id="${escapeHtml(id)}"><button class="drag-handle" type="button" aria-label="Drag ${escapeHtml(aisle?.name || "aisle")}. Use arrow keys to move." data-action="drag-aisle"><svg><use href="#i-grip"></use></svg></button><strong>${escapeHtml(aisle?.name || "Unknown aisle")}</strong><span class="shop-sort-position">${index + 1}</span></div>`;
+  }).join("");
+  dom.confirmShopSortButton.disabled = !shopSortDirty;
+}
+
+function clearSortIndicators() {
+  dom.shopSortList.querySelectorAll(".is-drop-before, .is-drop-after").forEach(row => row.classList.remove("is-drop-before", "is-drop-after"));
+}
+
+function showSortIndicator(targetId, position) {
+  clearSortIndicators();
+  const row = [...dom.shopSortList.querySelectorAll("[data-sort-aisle-id]")].find(item => item.dataset.sortAisleId === targetId);
+  if (row && targetId !== draggedAisleId) row.classList.add(position === "after" ? "is-drop-after" : "is-drop-before");
+  dropAisleId = targetId;
+  dropPosition = position === "after" ? "after" : "before";
+}
+
+function moveSortDraft(sourceId, targetId, position = "before") {
+  if (!sourceId || !targetId || sourceId === targetId) return;
+  const next = shopSortDraft.filter(id => id !== sourceId);
+  let index = next.indexOf(targetId);
+  if (index < 0) return;
+  if (position === "after") index += 1;
+  next.splice(index, 0, sourceId);
+  if (next.join("|") === shopSortDraft.join("|")) return;
+  shopSortDraft = next;
+  shopSortDirty = true;
+  renderShopSort();
+}
+
+function resetSortDrag() {
+  clearSortIndicators();
+  dom.shopSortList.querySelectorAll(".is-dragging").forEach(row => row.classList.remove("is-dragging"));
+  document.body.classList.remove("sorting-active");
+  draggedAisleId = null;
+  dropAisleId = null;
+  touchSortPointerId = null;
 }
 
 function renderAccount() {
@@ -549,8 +748,15 @@ function renderAll() {
   renderRecipeGrid();
   renderGrocery();
   renderPantry();
+  renderHouse();
   renderIngredientReview();
   renderPantryOrganiser();
+  renderSettingsManagers();
+  fillAisleSelect(dom.groceryAisleInput);
+  fillAisleSelect(dom.pantryAisleInput);
+  fillAisleSelect(dom.houseAisleInput);
+  if (dom.shoppingItemDialog.open) fillAisleSelect(dom.shoppingItemAisleInput, dom.shoppingItemAisleInput.value);
+  if (currentView === "shop-sort") renderShopSort();
   renderAccount();
   applyTheme(state.profile.theme);
 }
@@ -570,6 +776,16 @@ function openRecipeForm(recipe = null) {
   }
   dom.recipeDialog.showModal();
   window.setTimeout(() => dom.recipeTitleInput.focus(), 50);
+}
+
+function openShoppingItemForm(item) {
+  dom.shoppingItemForm.reset();
+  dom.shoppingItemIdInput.value = item.id;
+  dom.shoppingItemNameInput.value = item.name;
+  dom.shoppingItemCategoryInput.value = item.category;
+  fillAisleSelect(dom.shoppingItemAisleInput, item.aisleId);
+  dom.shoppingItemDialog.showModal();
+  window.setTimeout(() => dom.shoppingItemNameInput.focus(), 50);
 }
 
 function openRecipeDetail(recipe) {
@@ -642,7 +858,7 @@ function touchProfile(updates) {
   commit(state);
 }
 
-function addManualGrocery(name) {
+function addManualGrocery(name, category = "pantry", aisleId = Core.DEFAULT_AISLE_ID) {
   const displayName = Core.cleanText(name, 120);
   const normalized = Core.normalizeName(displayName);
   if (!normalized) return;
@@ -650,12 +866,15 @@ function addManualGrocery(name) {
   const existing = state.grocery.find(item => item.normalizedName === normalized);
   if (existing) {
     existing.name = displayName;
+    existing.normalizedName = normalized;
+    existing.category = category === "house" ? "house" : "pantry";
+    existing.aisleId = aisleId || Core.DEFAULT_AISLE_ID;
     existing.deletedAt = null;
     existing.bought = false;
     existing.boughtAt = null;
     existing.updatedAt = now;
   } else {
-    state.grocery.unshift(Core.normalizeGrocery({ id: Core.recordId("grocery"), name: displayName, sourceRecipeIds: [], bought: false, createdAt: now, updatedAt: now }));
+    state.grocery.unshift(Core.normalizeGrocery({ id: Core.recordId("grocery"), name: displayName, category, aisleId, sourceRecipeIds: [], bought: false, createdAt: now, updatedAt: now }));
   }
   commit(state, { message: `${displayName} added to your list.` });
 }
@@ -674,14 +893,17 @@ function addSelectedRecipesToGrocery(recipeIds = [...selectedRecipes]) {
 function backupPayload() {
   return {
     app: "myKitchen",
-    version: 1,
+    version: 2,
     exportedAt: Core.nowIso(),
     data: {
-      schemaVersion: 1,
+      schemaVersion: Core.SCHEMA_VERSION,
       profile: Core.clone(state.profile),
       recipes: Core.active(state.recipes),
       grocery: Core.active(state.grocery),
-      pantry: Core.active(state.pantry)
+      pantry: Core.active(state.pantry),
+      house: Core.active(state.house),
+      aisles: Core.active(state.aisles),
+      shops: Core.active(state.shops)
     }
   };
 }
@@ -711,7 +933,10 @@ function prepareReplacement(importedInput) {
     profile: { ...imported.profile, name: imported.profile.name || state.profile.name, updatedAt: now },
     recipes: replaceList(state.recipes, imported.recipes),
     grocery: replaceList(state.grocery, imported.grocery),
-    pantry: replaceList(state.pantry, imported.pantry)
+    pantry: replaceList(state.pantry, imported.pantry),
+    house: replaceList(state.house, imported.house),
+    aisles: replaceList(state.aisles, imported.aisles),
+    shops: replaceList(state.shops, imported.shops)
   });
 }
 
@@ -721,7 +946,7 @@ async function importBackup(file) {
     if (parsed?.app && parsed.app !== "myKitchen") throw new Error("This is not a myKitchen backup.");
     const source = parsed?.data || parsed?.state || parsed;
     if (!source || !Array.isArray(source.recipes) || !Array.isArray(source.grocery) || !Array.isArray(source.pantry)) throw new Error("This backup is missing myKitchen data.");
-    const confirmed = await askConfirm("Replace this kitchen?", "The imported recipes, grocery list and pantry will replace the current data for this account. A fresh backup is recommended first.", "Import backup");
+    const confirmed = await askConfirm("Replace this kitchen?", "The imported recipes, shopping list, Pantry, House, aisles and shops will replace the current data for this account. A fresh backup is recommended first.", "Import backup");
     if (!confirmed) return;
     selectedRecipes.clear();
     ingredientReviewSelection.clear();
@@ -893,37 +1118,58 @@ function cloudRecipe(row) {
 }
 
 function cloudGrocery(row) {
-  return Core.normalizeGrocery({ id: row.id, name: row.name, normalizedName: row.normalized_name, sourceRecipeIds: row.source_recipe_ids, bought: row.bought, boughtAt: row.bought_at, createdAt: row.client_created_at, updatedAt: row.client_updated_at, deletedAt: row.deleted_at });
+  return Core.normalizeGrocery({ id: row.id, name: row.name, normalizedName: row.normalized_name, category: row.item_category, aisleId: row.aisle_id, sourceRecipeIds: row.source_recipe_ids, bought: row.bought, boughtAt: row.bought_at, createdAt: row.client_created_at, updatedAt: row.client_updated_at, deletedAt: row.deleted_at });
 }
 
 function cloudPantry(row) {
-  return Core.normalizePantry({ id: row.id, name: row.name, normalizedName: row.normalized_name, status: row.status, stockedAt: row.stocked_at, finishedAt: row.finished_at, createdAt: row.client_created_at, updatedAt: row.client_updated_at, deletedAt: row.deleted_at });
+  return Core.normalizePantry({ id: row.id, name: row.name, normalizedName: row.normalized_name, aisleId: row.aisle_id, status: row.status, stockedAt: row.stocked_at, finishedAt: row.finished_at, createdAt: row.client_created_at, updatedAt: row.client_updated_at, deletedAt: row.deleted_at });
+}
+
+function cloudHouse(row) {
+  return Core.normalizeHouse({ id: row.id, name: row.name, normalizedName: row.normalized_name, aisleId: row.aisle_id, status: row.status, stockedAt: row.stocked_at, finishedAt: row.finished_at, createdAt: row.client_created_at, updatedAt: row.client_updated_at, deletedAt: row.deleted_at });
+}
+
+function cloudAisle(row) {
+  return Core.normalizeAisle({ id: row.id, name: row.name, normalizedName: row.normalized_name, createdAt: row.client_created_at, updatedAt: row.client_updated_at, deletedAt: row.deleted_at });
+}
+
+function cloudShop(row) {
+  return Core.normalizeShop({ id: row.id, name: row.name, normalizedName: row.normalized_name, aisleOrder: row.aisle_order, createdAt: row.client_created_at, updatedAt: row.client_updated_at, deletedAt: row.deleted_at });
 }
 
 async function fetchCloudState() {
-  const [profile, recipes, grocery, pantry] = await Promise.all([
-    authClient.from("mykitchen_profiles").select("user_id, name, theme, schema_version, client_updated_at, updated_at"),
+  const [profile, recipes, grocery, pantry, house, aisles, shops] = await Promise.all([
+    authClient.from("mykitchen_profiles").select("user_id, name, theme, selected_shop_id, schema_version, client_updated_at, updated_at"),
     authClient.from("mykitchen_recipes").select("id, title, category, notes, ingredients, steps, youtube_links, client_created_at, client_updated_at, deleted_at, updated_at"),
-    authClient.from("mykitchen_grocery_items").select("id, name, normalized_name, source_recipe_ids, bought, bought_at, client_created_at, client_updated_at, deleted_at, updated_at"),
-    authClient.from("mykitchen_pantry_items").select("id, name, normalized_name, status, stocked_at, finished_at, client_created_at, client_updated_at, deleted_at, updated_at")
+    authClient.from("mykitchen_grocery_items").select("id, name, normalized_name, item_category, aisle_id, source_recipe_ids, bought, bought_at, client_created_at, client_updated_at, deleted_at, updated_at"),
+    authClient.from("mykitchen_pantry_items").select("id, name, normalized_name, aisle_id, status, stocked_at, finished_at, client_created_at, client_updated_at, deleted_at, updated_at"),
+    authClient.from("mykitchen_house_items").select("id, name, normalized_name, aisle_id, status, stocked_at, finished_at, client_created_at, client_updated_at, deleted_at, updated_at"),
+    authClient.from("mykitchen_aisles").select("id, name, normalized_name, client_created_at, client_updated_at, deleted_at, updated_at"),
+    authClient.from("mykitchen_shops").select("id, name, normalized_name, aisle_order, client_created_at, client_updated_at, deleted_at, updated_at")
   ]);
-  for (const response of [profile, recipes, grocery, pantry]) if (response.error) throw response.error;
+  for (const response of [profile, recipes, grocery, pantry, house, aisles, shops]) if (response.error) throw response.error;
   const profileRow = profile.data?.[0];
   return Core.hydrateState({
-    profile: profileRow ? { name: profileRow.name, theme: profileRow.theme, updatedAt: profileRow.client_updated_at } : Core.blankState().profile,
+    profile: profileRow ? { name: profileRow.name, theme: profileRow.theme, selectedShopId: profileRow.selected_shop_id, updatedAt: profileRow.client_updated_at } : Core.blankState().profile,
     recipes: (recipes.data || []).map(cloudRecipe),
     grocery: (grocery.data || []).map(cloudGrocery),
-    pantry: (pantry.data || []).map(cloudPantry)
+    pantry: (pantry.data || []).map(cloudPantry),
+    house: (house.data || []).map(cloudHouse),
+    aisles: (aisles.data || []).map(cloudAisle),
+    shops: (shops.data || []).map(cloudShop)
   });
 }
 
 async function upsertCloudState(source) {
   const userId = authSession.user.id;
   const requests = [];
-  requests.push(authClient.from("mykitchen_profiles").upsert({ user_id: userId, name: source.profile.name, theme: source.profile.theme, schema_version: 1, client_updated_at: source.profile.updatedAt }, { onConflict: "user_id" }));
+  requests.push(authClient.from("mykitchen_profiles").upsert({ user_id: userId, name: source.profile.name, theme: source.profile.theme, selected_shop_id: source.profile.selectedShopId, schema_version: Core.SCHEMA_VERSION, client_updated_at: source.profile.updatedAt }, { onConflict: "user_id" }));
   if (source.recipes.length) requests.push(authClient.from("mykitchen_recipes").upsert(source.recipes.map(item => ({ user_id: userId, id: item.id, title: item.title, category: item.category, notes: item.notes, ingredients: item.ingredients, steps: item.steps, youtube_links: item.youtubeLinks, client_created_at: item.createdAt, client_updated_at: item.updatedAt, deleted_at: item.deletedAt })), { onConflict: "user_id,id" }));
-  if (source.grocery.length) requests.push(authClient.from("mykitchen_grocery_items").upsert(source.grocery.map(item => ({ user_id: userId, id: item.id, name: item.name, normalized_name: item.normalizedName, source_recipe_ids: item.sourceRecipeIds, bought: item.bought, bought_at: item.boughtAt, client_created_at: item.createdAt, client_updated_at: item.updatedAt, deleted_at: item.deletedAt })), { onConflict: "user_id,id" }));
-  if (source.pantry.length) requests.push(authClient.from("mykitchen_pantry_items").upsert(source.pantry.map(item => ({ user_id: userId, id: item.id, name: item.name, normalized_name: item.normalizedName, status: item.status, stocked_at: item.stockedAt, finished_at: item.finishedAt, client_created_at: item.createdAt, client_updated_at: item.updatedAt, deleted_at: item.deletedAt })), { onConflict: "user_id,id" }));
+  if (source.grocery.length) requests.push(authClient.from("mykitchen_grocery_items").upsert(source.grocery.map(item => ({ user_id: userId, id: item.id, name: item.name, normalized_name: item.normalizedName, item_category: item.category, aisle_id: item.aisleId, source_recipe_ids: item.sourceRecipeIds, bought: item.bought, bought_at: item.boughtAt, client_created_at: item.createdAt, client_updated_at: item.updatedAt, deleted_at: item.deletedAt })), { onConflict: "user_id,id" }));
+  if (source.pantry.length) requests.push(authClient.from("mykitchen_pantry_items").upsert(source.pantry.map(item => ({ user_id: userId, id: item.id, name: item.name, normalized_name: item.normalizedName, aisle_id: item.aisleId, status: item.status, stocked_at: item.stockedAt, finished_at: item.finishedAt, client_created_at: item.createdAt, client_updated_at: item.updatedAt, deleted_at: item.deletedAt })), { onConflict: "user_id,id" }));
+  if (source.house.length) requests.push(authClient.from("mykitchen_house_items").upsert(source.house.map(item => ({ user_id: userId, id: item.id, name: item.name, normalized_name: item.normalizedName, aisle_id: item.aisleId, status: item.status, stocked_at: item.stockedAt, finished_at: item.finishedAt, client_created_at: item.createdAt, client_updated_at: item.updatedAt, deleted_at: item.deletedAt })), { onConflict: "user_id,id" }));
+  if (source.aisles.length) requests.push(authClient.from("mykitchen_aisles").upsert(source.aisles.map(item => ({ user_id: userId, id: item.id, name: item.name, normalized_name: item.normalizedName, client_created_at: item.createdAt, client_updated_at: item.updatedAt, deleted_at: item.deletedAt })), { onConflict: "user_id,id" }));
+  if (source.shops.length) requests.push(authClient.from("mykitchen_shops").upsert(source.shops.map(item => ({ user_id: userId, id: item.id, name: item.name, normalized_name: item.normalizedName, aisle_order: item.aisleOrder, client_created_at: item.createdAt, client_updated_at: item.updatedAt, deleted_at: item.deletedAt })), { onConflict: "user_id,id" }));
   const responses = await Promise.all(requests);
   for (const response of responses) if (response.error) throw response.error;
 }
@@ -1028,6 +1274,169 @@ function bindEvents() {
   dom.openPantryOrganiserButton.addEventListener("click", () => setView("pantry-organiser"));
   dom.backToPantryButton.addEventListener("click", () => setView("pantry"));
 
+  dom.aisleAddForm.addEventListener("submit", event => {
+    event.preventDefault();
+    const name = Core.cleanText(dom.aisleNameInput.value, 60);
+    const normalizedName = Core.normalizeName(name);
+    if (!name || !normalizedName) return;
+    if (activeAisles().some(item => item.normalizedName === normalizedName)) { showToast("That aisle already exists."); return; }
+    const now = Core.nowIso();
+    const existing = state.aisles.find(item => item.normalizedName === normalizedName);
+    let aisle;
+    if (existing) {
+      Object.assign(existing, { name, normalizedName, deletedAt: null, updatedAt: now });
+      aisle = existing;
+    } else {
+      aisle = Core.normalizeAisle({ id: Core.recordId("aisle"), name, normalizedName, createdAt: now, updatedAt: now });
+      state.aisles.unshift(aisle);
+    }
+    for (const shop of activeShops()) {
+      if (!shop.aisleOrder.includes(aisle.id)) shop.aisleOrder.push(aisle.id);
+      shop.updatedAt = now;
+    }
+    dom.aisleNameInput.value = "";
+    commit(state, { message: `${name} added to your aisle list.` });
+    dom.aisleNameInput.focus();
+  });
+  dom.shopAddForm.addEventListener("submit", event => {
+    event.preventDefault();
+    const name = Core.cleanText(dom.shopNameInput.value, 60);
+    const normalizedName = Core.normalizeName(name);
+    if (!name || !normalizedName) return;
+    if (activeShops().some(item => item.normalizedName === normalizedName)) { showToast("That shop already exists."); return; }
+    const now = Core.nowIso();
+    const existing = state.shops.find(item => item.normalizedName === normalizedName);
+    let shop;
+    if (existing) {
+      Object.assign(existing, { name, normalizedName, aisleOrder: Core.shopAisleOrder(state, existing), deletedAt: null, updatedAt: now });
+      shop = existing;
+    } else {
+      shop = Core.normalizeShop({ id: Core.recordId("shop"), name, normalizedName, aisleOrder: activeAisles().map(item => item.id), createdAt: now, updatedAt: now });
+      state.shops.unshift(shop);
+    }
+    if (!state.profile.selectedShopId) state.profile = { ...state.profile, selectedShopId: shop.id, updatedAt: now };
+    dom.shopNameInput.value = "";
+    commit(state, { message: `${name} added.` });
+    dom.shopNameInput.focus();
+  });
+  dom.aisleSettingsList.addEventListener("click", async event => {
+    const row = event.target.closest("[data-aisle-id]");
+    const action = event.target.closest("[data-action]")?.dataset.action;
+    const aisle = row ? state.aisles.find(item => item.id === row.dataset.aisleId && !item.deletedAt) : null;
+    if (!aisle || !action) return;
+    if (action === "edit-aisle") { openManagerNameDialog("aisle", aisle.id); return; }
+    if (action !== "delete-aisle") return;
+    const affected = [...activeGrocery(), ...activePantry(), ...activeHouse()].filter(item => item.aisleId === aisle.id).length;
+    const confirmed = await askConfirm("Delete this aisle?", `${aisle.name} will be removed from every shop.${affected ? ` ${affected} ${affected === 1 ? "item" : "items"} will move to Unassigned.` : ""}`, "Delete aisle");
+    if (!confirmed) return;
+    const now = Core.nowIso();
+    aisle.deletedAt = now; aisle.updatedAt = now;
+    for (const item of [...activeGrocery(), ...activePantry(), ...activeHouse()].filter(record => record.aisleId === aisle.id)) { item.aisleId = Core.DEFAULT_AISLE_ID; item.updatedAt = now; }
+    for (const shop of activeShops()) { shop.aisleOrder = shop.aisleOrder.filter(id => id !== aisle.id); shop.updatedAt = now; }
+    commit(state, { message: `${aisle.name} deleted.` });
+  });
+  dom.shopSettingsList.addEventListener("click", async event => {
+    const row = event.target.closest("[data-shop-id]");
+    const action = event.target.closest("[data-action]")?.dataset.action;
+    const shop = row ? state.shops.find(item => item.id === row.dataset.shopId && !item.deletedAt) : null;
+    if (!shop || !action) return;
+    if (action === "sort-shop") { openShopSort(shop.id); return; }
+    if (action === "edit-shop") { openManagerNameDialog("shop", shop.id); return; }
+    if (action !== "delete-shop") return;
+    const confirmed = await askConfirm("Delete this shop?", `${shop.name} and its aisle order will be removed. Your aisles and shopping items will stay.`, "Delete shop");
+    if (!confirmed) return;
+    const now = Core.nowIso();
+    shop.deletedAt = now; shop.updatedAt = now;
+    if (state.profile.selectedShopId === shop.id) state.profile = { ...state.profile, selectedShopId: activeShops().find(item => item.id !== shop.id)?.id || "", updatedAt: now };
+    commit(state, { message: `${shop.name} deleted.` });
+  });
+  dom.managerNameForm.addEventListener("submit", event => {
+    event.preventDefault();
+    const type = dom.managerNameTypeInput.value === "shop" ? "shop" : "aisle";
+    const records = type === "shop" ? state.shops : state.aisles;
+    const record = records.find(item => item.id === dom.managerNameIdInput.value && !item.deletedAt);
+    const name = Core.cleanText(dom.managerNameInput.value, 60);
+    const normalizedName = Core.normalizeName(name);
+    if (!record || !name || !normalizedName) return;
+    if (Core.active(records).some(item => item.id !== record.id && item.normalizedName === normalizedName)) { showToast(`That ${type} already exists.`); return; }
+    record.name = name; record.normalizedName = normalizedName; record.updatedAt = Core.nowIso();
+    dom.managerNameDialog.close();
+    commit(state, { message: `${type === "shop" ? "Shop" : "Aisle"} renamed.` });
+  });
+  dom.backFromShopSortButton.addEventListener("click", async () => {
+    if (shopSortDirty) {
+      const discard = await askConfirm("Discard this aisle order?", "Your unconfirmed drag-and-drop changes will be lost.", "Discard changes");
+      if (!discard) return;
+    }
+    shopSortDirty = false;
+    setView("settings");
+  });
+  dom.confirmShopSortButton.addEventListener("click", () => {
+    const shop = state.shops.find(item => item.id === shopSortShopId && !item.deletedAt);
+    if (!shop || !shopSortDirty) return;
+    shop.aisleOrder = [...shopSortDraft];
+    shop.updatedAt = Core.nowIso();
+    shopSortDirty = false;
+    commit(state, { message: `${shop.name} aisle order saved.` });
+  });
+  dom.shopSortList.addEventListener("dragstart", event => {
+    const row = event.target.closest("[data-sort-aisle-id]");
+    if (!row) return;
+    draggedAisleId = row.dataset.sortAisleId;
+    row.classList.add("is-dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", draggedAisleId);
+  });
+  dom.shopSortList.addEventListener("dragover", event => {
+    const row = event.target.closest("[data-sort-aisle-id]");
+    if (!row || row.dataset.sortAisleId === draggedAisleId) return;
+    event.preventDefault();
+    const position = event.clientY > row.getBoundingClientRect().top + row.offsetHeight / 2 ? "after" : "before";
+    showSortIndicator(row.dataset.sortAisleId, position);
+  });
+  dom.shopSortList.addEventListener("drop", event => {
+    event.preventDefault();
+    moveSortDraft(draggedAisleId || event.dataTransfer.getData("text/plain"), dropAisleId, dropPosition);
+    resetSortDrag();
+  });
+  dom.shopSortList.addEventListener("dragend", resetSortDrag);
+  dom.shopSortList.addEventListener("keydown", event => {
+    if (!event.target.closest('[data-action="drag-aisle"]') || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
+    event.preventDefault();
+    const row = event.target.closest("[data-sort-aisle-id]");
+    const index = shopSortDraft.indexOf(row.dataset.sortAisleId);
+    const targetIndex = event.key === "ArrowUp" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= shopSortDraft.length) return;
+    moveSortDraft(row.dataset.sortAisleId, shopSortDraft[targetIndex], event.key === "ArrowUp" ? "before" : "after");
+    dom.shopSortList.querySelector(`[data-sort-aisle-id="${row.dataset.sortAisleId}"] [data-action="drag-aisle"]`)?.focus();
+  });
+  dom.shopSortList.addEventListener("pointerdown", event => {
+    const handle = event.target.closest('[data-action="drag-aisle"]');
+    if (event.pointerType === "mouse" || !handle) return;
+    const row = event.target.closest("[data-sort-aisle-id]");
+    draggedAisleId = row?.dataset.sortAisleId || null;
+    if (!draggedAisleId) return;
+    touchSortPointerId = event.pointerId;
+    handle.setPointerCapture?.(event.pointerId);
+    row.classList.add("is-dragging");
+    document.body.classList.add("sorting-active");
+    event.preventDefault();
+  });
+  dom.shopSortList.addEventListener("pointermove", event => {
+    if (touchSortPointerId !== event.pointerId || !draggedAisleId) return;
+    const row = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-sort-aisle-id]");
+    if (!row || row.dataset.sortAisleId === draggedAisleId) return;
+    const position = event.clientY > row.getBoundingClientRect().top + row.offsetHeight / 2 ? "after" : "before";
+    showSortIndicator(row.dataset.sortAisleId, position);
+    event.preventDefault();
+  });
+  dom.shopSortList.addEventListener("pointerup", event => {
+    if (touchSortPointerId !== event.pointerId) return;
+    moveSortDraft(draggedAisleId, dropAisleId, dropPosition);
+    resetSortDrag();
+  });
+  dom.shopSortList.addEventListener("pointercancel", resetSortDrag);
+
   dom.ingredientReviewSearch.addEventListener("input", renderIngredientReview);
   document.querySelectorAll("[data-ingredient-review-filter]").forEach(button => button.addEventListener("click", () => {
     ingredientReviewFilter = button.dataset.ingredientReviewFilter;
@@ -1056,7 +1465,7 @@ function bindEvents() {
       return selectedNames.includes(ingredientName) && ingredientName !== keepName;
     })).length;
     const replacedNames = selectedNames.filter(name => name !== keepName);
-    const confirmed = await askConfirm("Merge these ingredient names?", `${replacedNames.join(", ")} will become ${keepName} in ${affectedRecipes} ${affectedRecipes === 1 ? "recipe" : "recipes"}. Your grocery list and pantry will not change.`, "Merge");
+    const confirmed = await askConfirm("Merge these ingredient names?", `${replacedNames.join(", ")} will become ${keepName} in ${affectedRecipes} ${affectedRecipes === 1 ? "recipe" : "recipes"}. Your shopping, Pantry and House lists will not change.`, "Merge");
     if (!confirmed) return;
     state = Core.mergeRecipeIngredients(state, selectedNames, keepName, Core.nowIso());
     ingredientReviewSelection.clear();
@@ -1114,7 +1523,7 @@ function bindEvents() {
     else if (action === "delete-recipe") {
       const recipeId = recipe.id;
       const recipeTitle = recipe.title;
-      const confirmed = await askConfirm("Delete this recipe?", `${recipeTitle} will be removed. Existing grocery items will stay on your list.`);
+      const confirmed = await askConfirm("Delete this recipe?", `${recipeTitle} will be removed. Existing shopping items will stay on your list.`);
       if (!confirmed) return;
       const liveRecipe = state.recipes.find(item => item.id === recipeId && !item.deletedAt);
       if (!liveRecipe) return;
@@ -1181,23 +1590,44 @@ function bindEvents() {
   document.querySelector("#groceryAddForm").addEventListener("submit", event => {
     event.preventDefault();
     const name = dom.groceryNameInput.value;
+    const category = dom.groceryCategoryInput.value;
+    const aisleId = dom.groceryAisleInput.value;
     if (!Core.cleanText(name, 120)) return;
     dom.groceryNameInput.value = "";
     closeGrocerySuggestions();
-    addManualGrocery(name);
+    addManualGrocery(name, category, aisleId);
     dom.groceryNameInput.focus();
     closeGrocerySuggestions();
+  });
+  dom.shoppingShopSelect.addEventListener("change", () => touchProfile({ selectedShopId: dom.shoppingShopSelect.value }));
+  dom.shoppingItemForm.addEventListener("submit", event => {
+    event.preventDefault();
+    const item = state.grocery.find(record => record.id === dom.shoppingItemIdInput.value && !record.deletedAt);
+    const name = Core.cleanText(dom.shoppingItemNameInput.value, 120);
+    const normalizedName = Core.normalizeName(name);
+    if (!item || !name || !normalizedName) return;
+    const duplicate = activeGrocery().find(record => record.id !== item.id && record.normalizedName === normalizedName);
+    if (duplicate) { showToast("That item is already on your shopping list."); return; }
+    const now = Core.nowIso();
+    item.name = name;
+    item.normalizedName = normalizedName;
+    item.category = dom.shoppingItemCategoryInput.value === "house" ? "house" : "pantry";
+    item.aisleId = dom.shoppingItemAisleInput.value || Core.DEFAULT_AISLE_ID;
+    item.updatedAt = now;
+    if (item.bought) state = item.category === "house" ? Core.stockHouse(state, item.name, now, item.aisleId) : Core.stockPantry(state, item.name, now, item.aisleId);
+    dom.shoppingItemDialog.close();
+    commit(state, { message: "Shopping item updated." });
   });
   dom.clearGroceryButton.addEventListener("click", async () => {
     const itemCount = activeGrocery().length;
     if (!itemCount) return;
-    const confirmed = await askConfirm("Clear the grocery list?", `All ${itemCount} ${itemCount === 1 ? "item" : "items"} will be removed. Your pantry will not change.`, "Clear all");
+    const confirmed = await askConfirm("Clear the shopping list?", `All ${itemCount} ${itemCount === 1 ? "item" : "items"} will be removed. Your Pantry and House lists will not change.`, "Clear all");
     if (!confirmed) return;
     const liveItems = activeGrocery();
     if (!liveItems.length) return;
     const now = Core.nowIso();
     liveItems.forEach(item => { item.deletedAt = now; item.updatedAt = now; });
-    commit(state, { message: "Grocery list cleared." });
+    commit(state, { message: "Shopping list cleared." });
   });
   dom.groceryList.addEventListener("click", async event => {
     const card = event.target.closest("[data-grocery-id]");
@@ -1208,21 +1638,24 @@ function bindEvents() {
     if (action === "toggle-grocery") {
       const now = Core.nowIso();
       item.bought = !item.bought; item.boughtAt = item.bought ? now : null; item.updatedAt = now;
-      state = item.bought ? Core.stockPantry(state, item.name, now) : state;
-      commit(state, { message: item.bought ? `${item.name} added to your pantry.` : `${item.name} marked as not bought.` });
+      if (item.bought) state = item.category === "house" ? Core.stockHouse(state, item.name, now, item.aisleId) : Core.stockPantry(state, item.name, now, item.aisleId);
+      const destination = item.category === "house" ? "House" : "Pantry";
+      commit(state, { message: item.bought ? `${item.name} added to ${destination}.` : `${item.name} marked as not bought.` });
+    } else if (action === "edit-grocery") {
+      openShoppingItemForm(item);
     } else if (action === "delete-grocery") {
       const itemId = item.id;
       const itemName = item.name;
-      const confirmed = await askConfirm("Remove this grocery item?", `${itemName} will leave the grocery list. Its pantry status will not change.`, "Remove");
+      const confirmed = await askConfirm("Remove this shopping item?", `${itemName} will leave the shopping list. Its Pantry or House status will not change.`, "Remove");
       if (!confirmed) return;
       const liveItem = state.grocery.find(record => record.id === itemId && !record.deletedAt);
       if (!liveItem) return;
       const now = Core.nowIso(); liveItem.deletedAt = now; liveItem.updatedAt = now;
-      commit(state, { message: "Grocery item removed." });
+      commit(state, { message: "Shopping item removed." });
     }
   });
 
-  document.querySelector("#pantryAddForm").addEventListener("submit", event => { event.preventDefault(); const input = document.querySelector("#pantryNameInput"); const name = Core.cleanText(input.value, 120); if (!name) return; commit(Core.stockPantry(state, name), { message: `${name} is now in your pantry.` }); input.value = ""; input.focus(); });
+  document.querySelector("#pantryAddForm").addEventListener("submit", event => { event.preventDefault(); const input = document.querySelector("#pantryNameInput"); const name = Core.cleanText(input.value, 120); if (!name) return; commit(Core.stockPantry(state, name, Core.nowIso(), dom.pantryAisleInput.value), { message: `${name} is now in your pantry.` }); input.value = ""; input.focus(); });
   document.querySelectorAll("[data-pantry-filter]").forEach(button => button.addEventListener("click", () => { pantryFilter = button.dataset.pantryFilter; renderPantry(); }));
   dom.pantryList.addEventListener("click", async event => {
     const card = event.target.closest("[data-pantry-id]");
@@ -1236,12 +1669,35 @@ function bindEvents() {
     } else if (action === "delete-pantry") {
       const itemId = item.id;
       const itemName = item.name;
-      const confirmed = await askConfirm("Remove this pantry item?", `${itemName} will be removed from the pantry. Grocery items will remain.`, "Remove");
+      const confirmed = await askConfirm("Remove this pantry item?", `${itemName} will be removed from the pantry. Shopping items will remain.`, "Remove");
       if (!confirmed) return;
       const liveItem = state.pantry.find(record => record.id === itemId && !record.deletedAt);
       if (!liveItem) return;
       const now = Core.nowIso(); liveItem.deletedAt = now; liveItem.updatedAt = now;
       commit(state, { message: "Pantry item removed." });
+    }
+  });
+
+  document.querySelector("#houseAddForm").addEventListener("submit", event => { event.preventDefault(); const name = Core.cleanText(dom.houseNameInput.value, 120); if (!name) return; commit(Core.stockHouse(state, name, Core.nowIso(), dom.houseAisleInput.value), { message: `${name} is now in House.` }); dom.houseNameInput.value = ""; dom.houseNameInput.focus(); });
+  document.querySelectorAll("[data-house-filter]").forEach(button => button.addEventListener("click", () => { houseFilter = button.dataset.houseFilter; renderHouse(); }));
+  dom.houseList.addEventListener("click", async event => {
+    const card = event.target.closest("[data-house-id]");
+    const action = event.target.closest("[data-action]")?.dataset.action;
+    if (!card || !action) return;
+    const item = state.house.find(record => record.id === card.dataset.houseId && !record.deletedAt);
+    if (!item) return;
+    if (action === "toggle-house") {
+      const now = Core.nowIso(); item.status = item.status === "available" ? "finished" : "available"; item.finishedAt = item.status === "finished" ? now : null; item.stockedAt = item.status === "available" ? now : item.stockedAt; item.updatedAt = now;
+      commit(state, { message: item.status === "finished" ? `${item.name} marked finished.` : `${item.name} is available again.` });
+    } else if (action === "delete-house") {
+      const itemId = item.id;
+      const itemName = item.name;
+      const confirmed = await askConfirm("Remove this House item?", `${itemName} will be removed from House. Shopping items will remain.`, "Remove");
+      if (!confirmed) return;
+      const liveItem = state.house.find(record => record.id === itemId && !record.deletedAt);
+      if (!liveItem) return;
+      const now = Core.nowIso(); liveItem.deletedAt = now; liveItem.updatedAt = now;
+      commit(state, { message: "House item removed." });
     }
   });
 

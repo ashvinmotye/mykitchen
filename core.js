@@ -1,8 +1,9 @@
 (function attachMyKitchenCore(root) {
   "use strict";
 
-  const SCHEMA_VERSION = 1;
+  const SCHEMA_VERSION = 2;
   const EPOCH = "1970-01-01T00:00:00.000Z";
+  const DEFAULT_AISLE_ID = "aisle-unassigned";
 
   function nowIso() {
     return new Date().toISOString();
@@ -80,10 +81,13 @@
   function blankState() {
     return {
       schemaVersion: SCHEMA_VERSION,
-      profile: { name: "", theme: "light", updatedAt: EPOCH },
+      profile: { name: "", theme: "light", selectedShopId: "", updatedAt: EPOCH },
       recipes: [],
       grocery: [],
-      pantry: []
+      pantry: [],
+      house: [],
+      aisles: [],
+      shops: []
     };
   }
 
@@ -133,6 +137,8 @@
       ...common,
       name,
       normalizedName: normalizeName(record?.normalizedName || name),
+      category: record?.category === "house" ? "house" : "pantry",
+      aisleId: cleanText(record?.aisleId || record?.aisle_id || DEFAULT_AISLE_ID, 120) || DEFAULT_AISLE_ID,
       sourceRecipeIds: [...new Set(cleanLines(record?.sourceRecipeIds, 100, 120))],
       bought: Boolean(record?.bought),
       boughtAt: record?.boughtAt ? cleanText(record.boughtAt, 40) : null
@@ -147,9 +153,46 @@
       ...common,
       name,
       normalizedName: normalizeName(record?.normalizedName || name),
+      aisleId: cleanText(record?.aisleId || record?.aisle_id || DEFAULT_AISLE_ID, 120) || DEFAULT_AISLE_ID,
       status,
       stockedAt: cleanText(record?.stockedAt || common.createdAt, 40),
       finishedAt: status === "finished" && record?.finishedAt ? cleanText(record.finishedAt, 40) : null
+    };
+  }
+
+  function normalizeHouse(record) {
+    const common = normalizeCommon(record, "house");
+    const name = cleanText(record?.name, 120);
+    const status = record?.status === "finished" ? "finished" : "available";
+    return {
+      ...common,
+      name,
+      normalizedName: normalizeName(record?.normalizedName || name),
+      aisleId: cleanText(record?.aisleId || record?.aisle_id || DEFAULT_AISLE_ID, 120) || DEFAULT_AISLE_ID,
+      status,
+      stockedAt: cleanText(record?.stockedAt || common.createdAt, 40),
+      finishedAt: status === "finished" && record?.finishedAt ? cleanText(record.finishedAt, 40) : null
+    };
+  }
+
+  function normalizeAisle(record) {
+    const common = normalizeCommon(record, "aisle");
+    const name = cleanText(record?.name, 60);
+    return {
+      ...common,
+      name,
+      normalizedName: normalizeName(record?.normalizedName || name)
+    };
+  }
+
+  function normalizeShop(record) {
+    const common = normalizeCommon(record, "shop");
+    const name = cleanText(record?.name, 60);
+    return {
+      ...common,
+      name,
+      normalizedName: normalizeName(record?.normalizedName || name),
+      aisleOrder: [...new Set(cleanLines(record?.aisleOrder || record?.aisle_order, 300, 120))]
     };
   }
 
@@ -160,11 +203,15 @@
     base.profile = {
       name: cleanText(profile.name, 40),
       theme: profile.theme === "dark" ? "dark" : "light",
+      selectedShopId: cleanText(profile.selectedShopId || profile.selected_shop_id, 120),
       updatedAt: cleanText(profile.updatedAt || EPOCH, 40)
     };
     base.recipes = Array.isArray(source.recipes) ? source.recipes.map(normalizeRecipe).filter(item => item.title) : [];
     base.grocery = Array.isArray(source.grocery) ? source.grocery.map(normalizeGrocery).filter(item => item.name && item.normalizedName) : [];
     base.pantry = Array.isArray(source.pantry) ? source.pantry.map(normalizePantry).filter(item => item.name && item.normalizedName) : [];
+    base.house = Array.isArray(source.house) ? source.house.map(normalizeHouse).filter(item => item.name && item.normalizedName) : [];
+    base.aisles = Array.isArray(source.aisles) ? source.aisles.map(normalizeAisle).filter(item => item.name && item.normalizedName) : [];
+    base.shops = Array.isArray(source.shops) ? source.shops.map(normalizeShop).filter(item => item.name && item.normalizedName) : [];
     return base;
   }
 
@@ -197,7 +244,10 @@
       profile,
       recipes: mergeRecordLists(local.recipes, remote.recipes),
       grocery: mergeRecordLists(local.grocery, remote.grocery),
-      pantry: mergeRecordLists(local.pantry, remote.pantry)
+      pantry: mergeRecordLists(local.pantry, remote.pantry),
+      house: mergeRecordLists(local.house, remote.house),
+      aisles: mergeRecordLists(local.aisles, remote.aisles),
+      shops: mergeRecordLists(local.shops, remote.shops)
     });
   }
 
@@ -226,6 +276,11 @@
     return active(state?.pantry).some(item => item.status === "available" && normalizeName(parseIngredientLine(item.name).name) === key);
   }
 
+  function houseHas(state, name) {
+    const key = normalizeName(parseIngredientLine(name).name);
+    return active(state?.house).some(item => item.status === "available" && normalizeName(parseIngredientLine(item.name).name) === key);
+  }
+
   function knownGroceryItems(inputState) {
     const state = hydrateState(inputState);
     const items = new Map();
@@ -241,25 +296,38 @@
         .filter(Boolean)
     );
 
-    function remember(rawName, source) {
+    const availableHouseNames = new Set(
+      active(state.house)
+        .filter(item => item.status === "available")
+        .map(item => normalizeName(parseIngredientLine(item.name).name))
+        .filter(Boolean)
+    );
+
+    function remember(rawName, source, details = {}) {
       const name = parseIngredientLine(rawName).name;
       const normalizedName = normalizeName(name);
       if (!name || !normalizedName) return;
-      if (!items.has(normalizedName)) items.set(normalizedName, { name, normalizedName, sources: [] });
+      if (!items.has(normalizedName)) items.set(normalizedName, { name, normalizedName, sources: [], category: "pantry", aisleId: DEFAULT_AISLE_ID });
       const item = items.get(normalizedName);
       if (!item.sources.includes(source)) item.sources.push(source);
+      if (details.category) item.category = details.category === "house" ? "house" : "pantry";
+      if (details.aisleId) item.aisleId = cleanText(details.aisleId, 120) || DEFAULT_AISLE_ID;
     }
 
     for (const recipe of active(state.recipes)) {
       for (const ingredient of recipe.ingredients) remember(ingredient, "recipe");
     }
-    for (const item of active(state.pantry)) remember(item.name, "pantry");
-    for (const item of state.grocery) remember(item.name, "history");
+    for (const item of active(state.pantry)) remember(item.name, "pantry", { category: "pantry", aisleId: item.aisleId });
+    for (const item of active(state.house)) remember(item.name, "house", { category: "house", aisleId: item.aisleId });
+    for (const item of [...state.grocery].sort((a, b) => timestamp(a.updatedAt) - timestamp(b.updatedAt))) {
+      remember(item.name, "history", { category: item.category, aisleId: item.aisleId });
+    }
 
     return [...items.values()]
       .map(item => ({
         ...item,
         inPantry: availablePantryNames.has(item.normalizedName),
+        inHouse: availableHouseNames.has(item.normalizedName),
         onList: activeGroceryNames.has(item.normalizedName)
       }))
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.name.localeCompare(b.name));
@@ -269,7 +337,9 @@
     const state = hydrateState(inputState);
     const selected = new Set(recipeIds || []);
     const recipes = active(state.recipes).filter(recipe => selected.has(recipe.id));
-    const byName = new Map(active(state.grocery).map(item => [item.normalizedName, item]));
+    const byName = new Map([...state.grocery]
+      .sort((a, b) => timestamp(a.updatedAt) - timestamp(b.updatedAt))
+      .map(item => [item.normalizedName, item]));
 
     for (const recipe of recipes) {
       for (const ingredient of recipe.ingredients) {
@@ -287,6 +357,8 @@
             id: recordId("grocery"),
             name: ingredient,
             normalizedName: normalized,
+            category: "pantry",
+            aisleId: DEFAULT_AISLE_ID,
             sourceRecipeIds: [recipe.id],
             bought: false,
             createdAt: at,
@@ -300,7 +372,7 @@
     return state;
   }
 
-  function stockPantry(inputState, name, at = nowIso()) {
+  function stockPantry(inputState, name, at = nowIso(), aisleId = DEFAULT_AISLE_ID) {
     const state = hydrateState(inputState);
     const ingredientName = parseIngredientLine(name).name;
     const normalized = normalizeName(ingredientName);
@@ -309,6 +381,7 @@
     if (existing) {
       existing.name = ingredientName;
       existing.normalizedName = normalized;
+      existing.aisleId = cleanText(aisleId, 120) || DEFAULT_AISLE_ID;
       existing.status = "available";
       existing.stockedAt = at;
       existing.finishedAt = null;
@@ -319,12 +392,54 @@
       id: recordId("pantry"),
       name: ingredientName,
       normalizedName: normalized,
+      aisleId,
       status: "available",
       stockedAt: at,
       createdAt: at,
       updatedAt: at
     }));
     return state;
+  }
+
+  function stockHouse(inputState, name, at = nowIso(), aisleId = DEFAULT_AISLE_ID) {
+    const state = hydrateState(inputState);
+    const itemName = parseIngredientLine(name).name;
+    const normalized = normalizeName(itemName);
+    if (!normalized) return state;
+    const existing = active(state.house).find(item => normalizeName(parseIngredientLine(item.name).name) === normalized);
+    if (existing) {
+      existing.name = itemName;
+      existing.normalizedName = normalized;
+      existing.aisleId = cleanText(aisleId, 120) || DEFAULT_AISLE_ID;
+      existing.status = "available";
+      existing.stockedAt = at;
+      existing.finishedAt = null;
+      existing.updatedAt = at;
+      return state;
+    }
+    state.house.unshift(normalizeHouse({
+      id: recordId("house"),
+      name: itemName,
+      normalizedName: normalized,
+      aisleId,
+      status: "available",
+      stockedAt: at,
+      createdAt: at,
+      updatedAt: at
+    }));
+    return state;
+  }
+
+  function shopAisleOrder(inputState, shop) {
+    const state = hydrateState(inputState);
+    const activeIds = active(state.aisles).map(item => item.id);
+    const activeSet = new Set(activeIds);
+    const saved = (shop?.aisleOrder || []).filter(id => activeSet.has(id));
+    const missing = active(state.aisles)
+      .filter(item => !saved.includes(item.id))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || a.name.localeCompare(b.name))
+      .map(item => item.id);
+    return [...saved, ...missing];
   }
 
   function mergeRecipeIngredients(inputState, ingredientNames, keepName, at = nowIso()) {
@@ -363,6 +478,7 @@
   const api = {
     SCHEMA_VERSION,
     EPOCH,
+    DEFAULT_AISLE_ID,
     nowIso,
     clone,
     cleanText,
@@ -377,14 +493,20 @@
     recipePlainText,
     normalizeGrocery,
     normalizePantry,
+    normalizeHouse,
+    normalizeAisle,
+    normalizeShop,
     mergeRecordLists,
     mergeStates,
     active,
     recipeCategoryGroups,
     pantryHas,
+    houseHas,
     knownGroceryItems,
     addRecipesToGrocery,
     stockPantry,
+    stockHouse,
+    shopAisleOrder,
     mergeRecipeIngredients
   };
 

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fff7e8" />
-  <meta name="description" content="Save recipes, build a grocery list and keep an eye on your pantry." />
+  <meta name="description" content="Save recipes, build a shopping list and keep an eye on your pantry and house supplies." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="myKitchen" />
@@ -12,7 +12,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
-  <link rel="stylesheet" href="./styles.css?v=8" />
+  <link rel="stylesheet" href="./styles.css?v=9" />
 </head>
 <body>
   <svg class="icon-sprite" aria-hidden="true" focusable="false">
@@ -23,6 +23,9 @@
     <symbol id="i-recipes" viewBox="0 0 24 24"><path d="M5 4h10a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3V5a1 1 0 0 1 1-1Z"/><path d="M7 16h11M8 8h6M8 11h5"/></symbol>
     <symbol id="i-cart" viewBox="0 0 24 24"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L20 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></symbol>
     <symbol id="i-pantry" viewBox="0 0 24 24"><path d="M6 6h12l-1 15H7L6 6Z"/><path d="M5 3h14v3H5zM9 11h6M9 15h6"/></symbol>
+    <symbol id="i-house" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v11h14V10M9 21v-7h6v7"/></symbol>
+    <symbol id="i-store" viewBox="0 0 24 24"><path d="M4 10v11h16V10M3 10l2-7h14l2 7"/><path d="M3 10a3 3 0 0 0 5 2 3 3 0 0 0 4 0 3 3 0 0 0 4 0 3 3 0 0 0 5-2M8 21v-6h8v6"/></symbol>
+    <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="8" cy="6" r="1"/><circle cx="16" cy="6" r="1"/><circle cx="8" cy="12" r="1"/><circle cx="16" cy="12" r="1"/><circle cx="8" cy="18" r="1"/><circle cx="16" cy="18" r="1"/></symbol>
     <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.7a7 7 0 0 0-.8-1.8l.9-2-2.1-2.1-2 .9a7 7 0 0 0-1.8-.8L10.5 2h-3l-.7 2a7 7 0 0 0-1.8.8l-2-.9L.9 6l.9 2a7 7 0 0 0-.8 1.8l-2 .7v3l2 .7a7 7 0 0 0 .8 1.8l-.9 2L3 20.1l2-.9a7 7 0 0 0 1.8.8l.7 2h3l.7-2a7 7 0 0 0 1.8-.8l2 .9 2.1-2.1-.9-2a7 7 0 0 0 .8-1.8l2-.7Z" transform="translate(2) scale(.84)"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
@@ -83,8 +86,9 @@
       </div>
       <nav class="side-nav" aria-label="Main navigation">
         <button class="nav-button is-active" data-view="recipes"><svg><use href="#i-recipes"></use></svg><span>Recipes</span></button>
-        <button class="nav-button" data-view="grocery"><svg><use href="#i-cart"></use></svg><span>Grocery</span><b id="groceryNavCount" class="nav-count" hidden>0</b></button>
+        <button class="nav-button" data-view="grocery"><svg><use href="#i-cart"></use></svg><span>Shopping</span><b id="groceryNavCount" class="nav-count" hidden>0</b></button>
         <button class="nav-button" data-view="pantry"><svg><use href="#i-pantry"></use></svg><span>Pantry</span></button>
+        <button class="nav-button" data-view="house"><svg><use href="#i-house"></use></svg><span>House</span></button>
         <button class="nav-button" data-view="settings"><svg><use href="#i-settings"></use></svg><span>Settings</span></button>
       </nav>
       <div class="sidebar-note">
@@ -110,7 +114,7 @@
       <main class="main-content">
         <section id="view-recipes" class="view is-active" aria-labelledby="recipesTitle">
           <div class="page-head">
-            <div><h1 id="recipesTitle">What are we cooking?</h1><p>Choose one or several recipes, then send their ingredients to your grocery list.</p></div>
+            <div><h1 id="recipesTitle">What are we cooking?</h1><p>Choose one or several recipes, then send their ingredients to your shopping list.</p></div>
             <button id="addRecipeButton" class="button primary" type="button"><svg><use href="#i-plus"></use></svg>Add recipe</button>
           </div>
           <div class="recipe-toolbar">
@@ -131,28 +135,32 @@
         </section>
 
         <section id="view-grocery" class="view" aria-labelledby="groceryTitle">
-          <div class="page-head"><div><h1 id="groceryTitle">Grocery list</h1><p>Items stay on the list, even when they are already in your pantry.</p></div><button id="clearGroceryButton" class="button danger" type="button" hidden><svg><use href="#i-trash"></use></svg>Clear all</button></div>
+          <div class="page-head"><div><h1 id="groceryTitle">Shopping list</h1><p>Choose where each item belongs and which aisle you will find it in.</p></div><button id="clearGroceryButton" class="button danger" type="button" hidden><svg><use href="#i-trash"></use></svg>Clear all</button></div>
+          <label id="shoppingShopPicker" class="shopping-shop-picker" hidden><span>Shopping at</span><select id="shoppingShopSelect" aria-label="Choose shop"></select></label>
           <form id="groceryAddForm" class="quick-add grocery-quick-add">
             <div id="groceryAutocomplete" class="grocery-autocomplete">
               <label for="groceryNameInput">Quick add</label>
               <input id="groceryNameInput" maxlength="120" autocomplete="off" placeholder="e.g. Coconut milk" required aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false" aria-controls="grocerySuggestionList" />
-              <div id="grocerySuggestionList" class="grocery-suggestion-list" role="listbox" aria-label="Known grocery items" hidden></div>
+              <div id="grocerySuggestionList" class="grocery-suggestion-list" role="listbox" aria-label="Known shopping items" hidden></div>
             </div>
+            <label><span>Category</span><select id="groceryCategoryInput" required><option value="pantry">Pantry</option><option value="house">House</option></select></label>
+            <label><span>Aisle</span><select id="groceryAisleInput" required></select></label>
             <button class="button primary" type="submit"><svg><use href="#i-plus"></use></svg>Add item</button>
           </form>
           <div class="list-summary">
             <div><strong id="groceryOpenCount">0</strong><span>left to pick up</span></div>
-            <div><strong id="groceryPantryCount">0</strong><span>already in pantry</span></div>
+            <div><strong id="groceryPantryCount">0</strong><span>already at home</span></div>
             <div><strong id="groceryBoughtCount">0</strong><span>ticked off</span></div>
           </div>
-          <div id="groceryList" class="item-list"></div>
+          <div id="groceryList" class="shopping-list"></div>
           <div id="groceryEmpty" class="empty-state compact" hidden><h2>Your list is clear</h2><p>Select recipes or add an item manually.</p></div>
         </section>
 
         <section id="view-pantry" class="view" aria-labelledby="pantryTitle">
-          <div class="page-head"><div><h1 id="pantryTitle">Pantry</h1><p>Ticking a grocery item automatically brings it here.</p></div><button id="openPantryOrganiserButton" class="button secondary" type="button"><svg><use href="#i-list"></use></svg>Organise from ingredients</button></div>
+          <div class="page-head"><div><h1 id="pantryTitle">Pantry</h1><p>Ticking a Pantry shopping item automatically brings it here.</p></div><button id="openPantryOrganiserButton" class="button secondary" type="button"><svg><use href="#i-list"></use></svg>Organise from ingredients</button></div>
           <form id="pantryAddForm" class="quick-add">
             <label><span>Add what you already have</span><input id="pantryNameInput" maxlength="120" autocomplete="off" placeholder="e.g. Basmati rice" required /></label>
+            <label><span>Aisle</span><select id="pantryAisleInput" required></select></label>
             <button class="button primary" type="submit"><svg><use href="#i-plus"></use></svg>Add to pantry</button>
           </form>
           <div class="filter-row" role="group" aria-label="Pantry filter">
@@ -162,6 +170,22 @@
           </div>
           <div id="pantryList" class="pantry-grid"></div>
           <div id="pantryEmpty" class="empty-state compact" hidden><h2>Nothing here yet</h2><p>Add pantry items manually or tick them off while shopping.</p></div>
+        </section>
+
+        <section id="view-house" class="view" aria-labelledby="houseTitle">
+          <div class="page-head"><div><h1 id="houseTitle">House</h1><p>Household supplies from your shopping list stay organised here.</p></div></div>
+          <form id="houseAddForm" class="quick-add">
+            <label><span>Add what you already have</span><input id="houseNameInput" maxlength="120" autocomplete="off" placeholder="e.g. Washing-up liquid" required /></label>
+            <label><span>Aisle</span><select id="houseAisleInput" required></select></label>
+            <button class="button primary" type="submit"><svg><use href="#i-plus"></use></svg>Add to House</button>
+          </form>
+          <div class="filter-row" role="group" aria-label="House filter">
+            <button class="filter-pill is-active" data-house-filter="available" type="button">Available <span id="availableHouseCount">0</span></button>
+            <button class="filter-pill" data-house-filter="finished" type="button">Finished <span id="finishedHouseCount">0</span></button>
+            <button class="filter-pill" data-house-filter="all" type="button">All</button>
+          </div>
+          <div id="houseList" class="pantry-grid"></div>
+          <div id="houseEmpty" class="empty-state compact" hidden><h2>Nothing here yet</h2><p>Add House items manually or tick them off while shopping.</p></div>
         </section>
 
         <section id="view-settings" class="view" aria-labelledby="settingsTitle">
@@ -179,8 +203,20 @@
               </div>
             </section>
             <section class="settings-card wide-card ingredient-tools-card">
-              <div class="settings-card-head"><div><p class="eyebrow">INGREDIENT LIBRARY</p><h2>Tidy ingredient names</h2><p>Review ingredient names A–Z and merge duplicate spellings. Measurements and (optional) notes stay in their recipes.</p></div></div>
-              <button id="openIngredientReviewButton" class="button secondary" type="button"><svg><use href="#i-merge"></use></svg>Review ingredients</button>
+              <div class="settings-card-head"><div><p class="eyebrow">ITEM LIBRARY</p><h2>Items tidying</h2><p>Review item names A–Z and merge duplicate ingredient spellings. Measurements and (optional) notes stay in their recipes.</p></div></div>
+              <button id="openIngredientReviewButton" class="button secondary" type="button"><svg><use href="#i-merge"></use></svg>Review items</button>
+            </section>
+            <section class="settings-card wide-card">
+              <div class="settings-card-head"><div><p class="eyebrow">SHOPPING LAYOUT</p><h2>Aisles</h2><p>Add every aisle once. Shopping items use this as their master aisle list.</p></div></div>
+              <form id="aisleAddForm" class="manager-add-form"><label><span>Aisle name</span><input id="aisleNameInput" maxlength="60" autocomplete="off" placeholder="e.g. Fresh produce" required /></label><button class="button secondary" type="submit"><svg><use href="#i-plus"></use></svg>Add aisle</button></form>
+              <div id="aisleSettingsList" class="settings-manager-list"></div>
+              <p id="aisleSettingsEmpty" class="settings-empty">No aisles added yet. Items will use Unassigned until you add one.</p>
+            </section>
+            <section class="settings-card wide-card">
+              <div class="settings-card-head"><div><p class="eyebrow">SHOPPING LAYOUT</p><h2>Shops</h2><p>Add shops, then drag their aisles into the order you walk through them.</p></div></div>
+              <form id="shopAddForm" class="manager-add-form"><label><span>Shop name</span><input id="shopNameInput" maxlength="60" autocomplete="off" placeholder="e.g. Super U" required /></label><button class="button secondary" type="submit"><svg><use href="#i-plus"></use></svg>Add shop</button></form>
+              <div id="shopSettingsList" class="settings-manager-list"></div>
+              <p id="shopSettingsEmpty" class="settings-empty">No shops added yet. Your shopping list will stay alphabetical.</p>
             </section>
             <section class="settings-card wide-card">
               <div class="settings-card-head"><div><p class="eyebrow">ACCOUNT &amp; CLOUD</p><h2>Automatic sync</h2><p>myKitchen uses the same Supabase account as Forge and Level90.</p></div><span id="settingsConnectionStatus" class="status-badge">Connected</span></div>
@@ -200,7 +236,7 @@
         </section>
 
         <section id="view-ingredient-review" class="view" aria-labelledby="ingredientReviewTitle">
-          <div class="page-head"><div><p class="eyebrow">INGREDIENT LIBRARY</p><h1 id="ingredientReviewTitle">Review ingredients</h1><p>Select duplicate names, then choose the spelling to keep. Measurements and (optional) notes are hidden here but remain in each recipe.</p></div><button id="backToSettingsButton" class="button secondary" type="button"><svg><use href="#i-back"></use></svg>Back to settings</button></div>
+          <div class="page-head"><div><p class="eyebrow">ITEM LIBRARY</p><h1 id="ingredientReviewTitle">Review items</h1><p>Select duplicate ingredient names, then choose the spelling to keep. Measurements and (optional) notes are hidden here but remain in each recipe.</p></div><button id="backToSettingsButton" class="button secondary" type="button"><svg><use href="#i-back"></use></svg>Back to settings</button></div>
           <div class="manager-summary two-column-summary">
             <div><strong id="ingredientReviewTotal">0</strong><span>unique ingredient names</span></div>
             <div><strong id="ingredientReviewDuplicateCount">0</strong><span>possible duplicate groups</span></div>
@@ -219,6 +255,13 @@
           </div>
           <div id="ingredientReviewList" class="ingredient-manager-list"></div>
           <div id="ingredientReviewEmpty" class="empty-state compact" hidden><h2>No ingredients found</h2><p>Add ingredients to your recipes, or try another filter.</p></div>
+        </section>
+
+        <section id="view-shop-sort" class="view" aria-labelledby="shopSortTitle">
+          <div class="page-head"><div><p class="eyebrow">SHOP AISLE ORDER</p><h1 id="shopSortTitle">Organise aisles</h1><p>Drag each aisle into the order you visit it in this shop.</p></div><button id="backFromShopSortButton" class="button secondary" type="button"><svg><use href="#i-back"></use></svg>Back to settings</button></div>
+          <div id="shopSortList" class="shop-sort-list" aria-label="Draggable aisle order"></div>
+          <div id="shopSortEmpty" class="empty-state compact" hidden><h2>No aisles to organise</h2><p>Add aisles in Settings first.</p></div>
+          <button id="confirmShopSortButton" class="button primary floating-confirm" type="button" disabled><svg><use href="#i-check"></use></svg>Confirm sort</button>
         </section>
 
         <section id="view-pantry-organiser" class="view" aria-labelledby="pantryOrganiserTitle">
@@ -247,8 +290,9 @@
 
       <nav class="bottom-nav" aria-label="Main navigation">
         <button class="nav-button is-active" data-view="recipes"><svg><use href="#i-recipes"></use></svg><span>Recipes</span></button>
-        <button class="nav-button" data-view="grocery"><svg><use href="#i-cart"></use></svg><span>Grocery</span><b id="groceryMobileCount" class="nav-count" hidden>0</b></button>
+        <button class="nav-button" data-view="grocery"><svg><use href="#i-cart"></use></svg><span>Shopping</span><b id="groceryMobileCount" class="nav-count" hidden>0</b></button>
         <button class="nav-button" data-view="pantry"><svg><use href="#i-pantry"></use></svg><span>Pantry</span></button>
+        <button class="nav-button" data-view="house"><svg><use href="#i-house"></use></svg><span>House</span></button>
         <button class="nav-button" data-view="settings"><svg><use href="#i-settings"></use></svg><span>Settings</span></button>
       </nav>
     </div>
@@ -289,6 +333,28 @@
     </div>
   </dialog>
 
+  <dialog id="shoppingItemDialog" class="app-dialog item-dialog">
+    <form id="shoppingItemForm" class="dialog-card" method="dialog">
+      <div class="dialog-head"><div><p class="eyebrow">SHOPPING ITEM</p><h2>Edit item</h2></div><button class="icon-button dialog-close" type="button" data-close-dialog="shoppingItemDialog" aria-label="Close"><svg><use href="#i-close"></use></svg></button></div>
+      <input id="shoppingItemIdInput" type="hidden" />
+      <div class="form-grid">
+        <label class="span-2">Item name<input id="shoppingItemNameInput" maxlength="120" required /></label>
+        <label>Category<select id="shoppingItemCategoryInput" required><option value="pantry">Pantry</option><option value="house">House</option></select></label>
+        <label>Aisle<select id="shoppingItemAisleInput" required></select></label>
+      </div>
+      <div class="dialog-actions"><button class="button ghost" type="button" data-close-dialog="shoppingItemDialog">Cancel</button><button class="button primary" type="submit">Save item</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="managerNameDialog" class="app-dialog name-dialog">
+    <form id="managerNameForm" class="dialog-card" method="dialog">
+      <div class="dialog-head"><div><p id="managerNameEyebrow" class="eyebrow">EDIT</p><h2 id="managerNameTitle">Edit name</h2></div><button class="icon-button dialog-close" type="button" data-close-dialog="managerNameDialog" aria-label="Close"><svg><use href="#i-close"></use></svg></button></div>
+      <input id="managerNameTypeInput" type="hidden" /><input id="managerNameIdInput" type="hidden" />
+      <label id="managerNameLabel">Name<input id="managerNameInput" maxlength="60" required /></label>
+      <div class="dialog-actions"><button class="button ghost" type="button" data-close-dialog="managerNameDialog">Cancel</button><button class="button primary" type="submit">Save</button></div>
+    </form>
+  </dialog>
+
   <dialog id="confirmDialog" class="app-dialog confirm-dialog">
     <div class="dialog-card"><span class="dialog-sticker">?</span><h2 id="confirmTitle">Are you sure?</h2><p id="confirmMessage"></p><div class="dialog-actions"><button id="confirmCancelButton" class="button ghost" type="button">Cancel</button><button id="confirmActionButton" class="button danger" type="button">Delete</button></div></div>
   </dialog>
@@ -296,7 +362,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3" crossorigin="anonymous" defer></script>
-  <script src="./core.js?v=8" defer></script>
-  <script src="./app.js?v=8" defer></script>
+  <script src="./core.js?v=9" defer></script>
+  <script src="./app.js?v=9" defer></script>
 </body>
 </html>
